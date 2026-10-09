@@ -318,7 +318,7 @@ export async function rescheduleReservation(
   // Reschedule mengabaikan lead time cutoff (R-T4), hanya cek R-T1..R-T3 dan R-T5
   const sched = validateSchedule(
     { date: input.date, start: input.start, end: input.end },
-    { ...setting, leadDays: 0 }, // bypass lead cutoff
+    { ...setting, skipLeadCutoff: true }, // bypass lead cutoff R-T4
     now
   );
 

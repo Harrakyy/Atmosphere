@@ -10,6 +10,7 @@ export interface TimeRuleSettings {
   leadDays?: number;
   leadCutoffTime?: string;
   maxAdvanceDays?: number;
+  skipLeadCutoff?: boolean;
 }
 
 export type ScheduleValidationResult =
@@ -98,17 +99,19 @@ export function validateSchedule(
   }
 
   // R-T4: Batas paling lambat pesan (H-leadDays pukul leadCutoffTime)
-  const cutoffDateUtc = resDateUtc - leadDays * 24 * 60 * 60 * 1000;
-  const cutoffDate = new Date(cutoffDateUtc);
-  const cutoffDateStr = `${cutoffDate.getUTCFullYear()}-${String(cutoffDate.getUTCMonth() + 1).padStart(2, "0")}-${String(cutoffDate.getUTCDate()).padStart(2, "0")}`;
-  const cutoffDateTime = wibDateTime(cutoffDateStr, leadCutoffTime);
+  if (!settings.skipLeadCutoff) {
+    const cutoffDateUtc = resDateUtc - leadDays * 24 * 60 * 60 * 1000;
+    const cutoffDate = new Date(cutoffDateUtc);
+    const cutoffDateStr = `${cutoffDate.getUTCFullYear()}-${String(cutoffDate.getUTCMonth() + 1).padStart(2, "0")}-${String(cutoffDate.getUTCDate()).padStart(2, "0")}`;
+    const cutoffDateTime = wibDateTime(cutoffDateStr, leadCutoffTime);
 
-  if (now.getTime() > cutoffDateTime.getTime()) {
-    return {
-      ok: false,
-      rule: "R-T4",
-      message: `Batas pemesanan untuk tanggal tersebut adalah H-${leadDays} pukul ${leadCutoffTime} WIB.`,
-    };
+    if (now.getTime() > cutoffDateTime.getTime()) {
+      return {
+        ok: false,
+        rule: "R-T4",
+        message: `Batas pemesanan untuk tanggal tersebut adalah H-${leadDays} pukul ${leadCutoffTime} WIB.`,
+      };
+    }
   }
 
   // R-T5: Batas paling jauh pesan (hari ini + maxAdvanceDays)

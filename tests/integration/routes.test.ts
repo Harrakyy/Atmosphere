@@ -7,6 +7,7 @@ import { GET as getDayBusyRoute } from "@/app/api/availability/day/route";
 import { POST as createReservationRoute } from "@/app/api/reservations/route";
 import { GET as getTicketRoute } from "@/app/api/tickets/[token]/route";
 import { POST as lookupTicketRoute } from "@/app/api/tickets/lookup/route";
+import { POST as notificationRoute } from "@/app/api/payments/midtrans/notification/route";
 import { NextRequest } from "next/server";
 
 describe("End-to-End API Routes (Hari 1)", () => {
@@ -183,5 +184,49 @@ describe("End-to-End API Routes (Hari 1)", () => {
     const json = await res.json();
     expect(json.success).toBe(false);
     expect(json.error.code).toBe("CART_RULE");
+  });
+
+  it("POST /api/payments/midtrans/notification handles webhook and updates status", async () => {
+    // 1. Create a reservation first
+    const createReq = new NextRequest("http://localhost:3000/api/reservations", {
+      method: "POST",
+      body: JSON.stringify({
+        roomId,
+        date: "2026-10-18",
+        start: "14:00",
+        end: "16:00",
+        guestCount: 4,
+        items: [
+          { productId: foodId, option: null, quantity: 2 },
+          { productId: drinkId, option: "Ice", quantity: 2 },
+        ],
+        servingTime: "ON_ARRIVAL",
+        customer: { name: "Budi Santoso", phone: "081234567890" },
+      }),
+      headers: { "Content-Type": "application/json" },
+    });
+    const createRes = await createReservationRoute(createReq);
+    const { code, totalAmount } = (await createRes.json()).data;
+
+    // 2. Send webhook notification
+    const notifyReq = new NextRequest("http://localhost:3000/api/payments/midtrans/notification", {
+      method: "POST",
+      body: JSON.stringify({
+        order_id: code,
+        gross_amount: totalAmount,
+        payment_type: "other_qris",
+        transaction_status: "settlement",
+      }),
+      headers: { "Content-Type": "application/json" },
+    });
+    const notifyRes = await notificationRoute(notifyReq);
+    expect(notifyRes.status).toBe(200);
+    const notifyJson = await notifyRes.json();
+    expect(notifyJson.success).toBe(true);
+    expect(notifyJson.data.received).toBe(true);
+
+    // 3. Confirm reservation status is now CONFIRMED
+    const updated = await prisma.reservation.findUnique({ where: { code } });
+    expect(updated?.status).toBe("CONFIRMED");
   });
 });

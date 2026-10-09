@@ -247,3 +247,15 @@ Content-Type: application/json
   "holdMinutes": 17,
   "cafeWhatsapp": "6281234567890"
 }
+
+### 27. Admin Upload Image
+POST {{baseUrl}}/api/admin/uploads
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="sample.jpg"
+Content-Type: image/jpeg
+
+< ./sample.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+

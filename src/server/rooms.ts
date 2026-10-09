@@ -37,7 +37,10 @@ export async function archiveRoom(
   const activeReservations = await db.reservation.findFirst({
     where: {
       roomId: id,
-      status: { in: ["PENDING_PAYMENT", "CONFIRMED", "CHECKED_IN"] },
+      OR: [
+        { status: { in: ["CONFIRMED", "CHECKED_IN"] } },
+        { status: "PENDING_PAYMENT", holdExpiresAt: { gt: now } },
+      ],
       startAt: { gte: now },
     },
   });

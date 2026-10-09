@@ -496,6 +496,47 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
     });
     const archived = await archiveRoom(testRoomId, new Date("2026-10-10T00:00:00+07:00"), prisma);
     expect(archived.isArchived).toBe(true);
+
+    // Reservasi PENDING_PAYMENT yang hold-nya sudah habis tidak menghalangi arsip
+    await prisma.room.update({ where: { id: testRoomId }, data: { isArchived: false } });
+    const expiredRes = await createTestRes("2026-10-18", "10:00", "12:00");
+    await prisma.reservation.update({
+      where: { id: expiredRes.id },
+      data: {
+        status: "PENDING_PAYMENT",
+        holdExpiresAt: new Date("2026-10-10T09:00:00+07:00"),
+      },
+    });
+    const archivedWithExpiredHold = await archiveRoom(
+      testRoomId,
+      new Date("2026-10-10T10:00:00+07:00"),
+      prisma
+    );
+    expect(archivedWithExpiredHold.isArchived).toBe(true);
+  });
+
+  it("Reschedule on same day after 21:00 WIB succeeds because lead cutoff is bypassed", async () => {
+    const res = await createTestRes("2026-10-18", "10:00", "12:00");
+    await prisma.reservation.update({
+      where: { id: res.id },
+      data: { status: "CONFIRMED" },
+    });
+
+    // Waktu sekarang 21:15 WIB pada hari H (setelah batas cutoff 21:00)
+    const now = new Date("2026-10-18T21:15:00+07:00");
+    const moved = await rescheduleReservation(
+      res.id,
+      {
+        roomId: testRoomId,
+        date: "2026-10-18",
+        start: "14:00",
+        end: "16:00",
+      },
+      adminUserId,
+      now,
+      prisma
+    );
+    expect(moved.id).toBe(res.id);
   });
 
   // Category Delete rule
