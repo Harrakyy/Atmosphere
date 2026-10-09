@@ -1,7 +1,9 @@
 import { prisma } from "../db";
 import { NotFoundError } from "../http";
 import { normalizePhone } from "../phone";
-import { saveTicketLink, contactCafeLink } from "../wa";
+import { saveTicketLink, contactCafeLink, cancelLink } from "../wa";
+import { wibDateTime, todayWib } from "../time";
+import { ReservationStatus, Prisma } from "@prisma/client";
 
 export async function getTicketByToken(
   token: string,
@@ -117,3 +119,149 @@ export async function lookupTicket(
 
   return { ticketToken: reservation.ticketToken };
 }
+
+export async function getAdminReservations(
+  filter: { date?: string | null; status?: ReservationStatus | null } = {},
+  now: Date = new Date(),
+  db = prisma
+) {
+  const whereClause: Record<string, unknown> = {};
+
+  if (filter.status) {
+    whereClause.status = filter.status;
+  }
+
+  // Filter tanggal: default hari ini (WIB) jika tidak diset dan bukan 'all'
+  const dateStr = filter.date === undefined ? todayWib(now) : filter.date;
+  if (dateStr && dateStr !== "all") {
+    const startOfDay = wibDateTime(dateStr, "00:00");
+    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+    whereClause.startAt = { gte: startOfDay, lt: endOfDay };
+  }
+
+  return db.reservation.findMany({
+    where: whereClause,
+    include: {
+      room: true,
+      _count: { select: { items: true } },
+    },
+    orderBy: { startAt: "asc" },
+  });
+}
+
+export async function getAdminReservationDetail(
+  id: string,
+  db = prisma
+) {
+  const reservation = await db.reservation.findUnique({
+    where: { id },
+    include: {
+      room: true,
+      items: {
+        include: { product: true },
+      },
+    },
+  });
+
+  if (!reservation) {
+    throw new NotFoundError("Reservasi tidak ditemukan.");
+  }
+
+  const logs = await db.activityLog.findMany({
+    where: { reservationId: id },
+    orderBy: { createdAt: "asc" },
+  });
+
+  let waCancelLink: string | null = null;
+  if (reservation.status === "CANCELLED" && reservation.cancelledBy) {
+    waCancelLink = cancelLink({
+      by: reservation.cancelledBy,
+      customerPhone: reservation.customerPhone,
+      customerName: reservation.customerName,
+      code: reservation.code,
+      roomName: reservation.room.name,
+      start: reservation.startAt,
+      end: reservation.endAt,
+      reason: reservation.cancelReason ?? undefined,
+      totalAmount: reservation.totalAmount,
+      refundAmount: reservation.refundAmount,
+    });
+  }
+
+  return {
+    ...reservation,
+    logs,
+    wa: {
+      cancelLink: waCancelLink,
+    },
+  };
+}
+
+export async function getNeedsActionReservations(
+  now: Date = new Date(),
+  db = prisma
+) {
+  // (a) Reservasi PENDING_PAYMENT / CONFIRMED di masa depan yang beririsan dengan blokir
+  const activeBlocks = await db.roomBlock.findMany({
+    where: {
+      OR: [{ endAt: null }, { endAt: { gt: now } }],
+    },
+  });
+
+  type ReservationWithRoom = Prisma.ReservationGetPayload<{ include: { room: true } }>;
+  const conflictingReservations: ReservationWithRoom[] = [];
+
+  for (const block of activeBlocks) {
+    const resList = await db.reservation.findMany({
+      where: {
+        roomId: block.roomId,
+        status: { in: ["PENDING_PAYMENT", "CONFIRMED"] },
+        startAt: { gte: now },
+        blockEndAt: { gt: block.startAt },
+        ...(block.endAt ? { startAt: { lt: block.endAt } } : {}),
+      },
+      include: { room: true },
+    });
+    conflictingReservations.push(...resList);
+  }
+
+  // (b) Reservasi CANCELLED dengan refundStatus=PENDING
+  const pendingRefunds = await db.reservation.findMany({
+    where: {
+      status: "CANCELLED",
+      refundStatus: "PENDING",
+    },
+    include: { room: true },
+    orderBy: { cancelledAt: "desc" },
+  });
+
+  // Gabungkan dan deduplikasi
+  const seenIds = new Set<string>();
+  const combined = [];
+
+  for (const r of [...conflictingReservations, ...pendingRefunds]) {
+    if (!seenIds.has(r.id)) {
+      seenIds.add(r.id);
+      combined.push(r);
+    }
+  }
+
+  return combined;
+}
+
+export async function getCheckInSummaryByCode(code: string, db = prisma) {
+  const reservation = await db.reservation.findUnique({
+    where: { code: code.trim().toUpperCase() },
+    include: {
+      room: true,
+      items: true,
+    },
+  });
+
+  if (!reservation) {
+    throw new NotFoundError("Reservasi dengan kode tersebut tidak ditemukan.");
+  }
+
+  return reservation;
+}
+

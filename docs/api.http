@@ -1,5 +1,9 @@
-### Atmosphere Cafe - Manual API Testing (Hari 1)
+### Atmosphere Cafe - Manual API Testing
 @baseUrl = http://localhost:3000
+
+###############################################################################
+### PUBLIC ENDPOINTS
+###############################################################################
 
 ### 1. Get Public Menu
 GET {{baseUrl}}/api/menu
@@ -8,7 +12,6 @@ GET {{baseUrl}}/api/menu
 GET {{baseUrl}}/api/availability?date=2026-10-18&start=10:00&end=12:00&guests=4
 
 ### 3. Check Day Busy Slots
-# Ganti roomId dengan ID ruangan dari endpoint availability
 GET {{baseUrl}}/api/availability/day?roomId=cm0loft0001&date=2026-10-18
 
 ### 4. Create Reservation
@@ -44,7 +47,6 @@ Content-Type: application/json
 }
 
 ### 5. Get Ticket by Token
-# Ganti {ticketToken} dengan token yang didapatkan dari response createReservation
 GET {{baseUrl}}/api/tickets/sample-ticket-token-32-chars-long
 
 ### 6. Lookup Ticket by Code & Phone
@@ -54,4 +56,194 @@ Content-Type: application/json
 {
   "code": "ATM-7K2F9Q",
   "phone": "0812-3456-7890"
+}
+
+### 7. Midtrans Webhook Notification
+POST {{baseUrl}}/api/payments/midtrans/notification
+Content-Type: application/json
+
+{
+  "order_id": "ATM-7K2F9Q",
+  "status_code": "200",
+  "gross_amount": "95000.00",
+  "signature_key": "YOUR_SHA512_SIGNATURE_KEY",
+  "transaction_status": "settlement",
+  "fraud_status": "accept",
+  "payment_type": "qris",
+  "transaction_time": "2026-10-10 10:15:00"
+}
+
+
+###############################################################################
+### AUTH & ADMIN
+###############################################################################
+
+### 8. Admin Login (Better Auth)
+# @name adminLogin
+POST {{baseUrl}}/api/auth/sign-in/email
+Content-Type: application/json
+
+{
+  "email": "admin@atmosphere.cafe",
+  "password": "adminpassword123"
+}
+
+### 9. Admin List Reservations
+GET {{baseUrl}}/api/admin/reservations?date=2026-10-18&status=CONFIRMED
+
+### 10. Admin Get Reservation Detail
+GET {{baseUrl}}/api/admin/reservations/reservation_id_here
+
+### 11. Admin Check-In Reservation
+POST {{baseUrl}}/api/admin/reservations/reservation_id_here/check-in
+
+### 12. Admin Complete Reservation
+POST {{baseUrl}}/api/admin/reservations/reservation_id_here/complete
+
+### 13. Admin Mark No-Show
+POST {{baseUrl}}/api/admin/reservations/reservation_id_here/no-show
+
+### 14. Admin Cancel Reservation (by CAFE)
+POST {{baseUrl}}/api/admin/reservations/reservation_id_here/cancel
+Content-Type: application/json
+
+{
+  "by": "CAFE",
+  "reason": "Pemeliharaan mendadak ruangan"
+}
+
+### 15. Admin Cancel Reservation (by CUSTOMER)
+POST {{baseUrl}}/api/admin/reservations/reservation_id_here/cancel
+Content-Type: application/json
+
+{
+  "by": "CUSTOMER",
+  "reason": "Permintaan pembatalan customer",
+  "refundAmount": 50000
+}
+
+### 16. Admin Mark Refund Done
+POST {{baseUrl}}/api/admin/reservations/reservation_id_here/refund-done
+Content-Type: application/json
+
+{
+  "note": "Ditransfer via BCA 1234567890 an Budi Santoso"
+}
+
+### 17. Admin Reschedule Reservation
+POST {{baseUrl}}/api/admin/reservations/reservation_id_here/reschedule
+Content-Type: application/json
+
+{
+  "roomId": "cm0loft0001",
+  "date": "2026-10-19",
+  "start": "13:00",
+  "end": "15:00"
+}
+
+### 18. Admin Scanner Lookup by Code
+GET {{baseUrl}}/api/admin/check-in/ATM-7K2F9Q
+
+### 19. Admin Needs Action List
+GET {{baseUrl}}/api/admin/needs-action
+
+### 20. Admin Kitchen Recap
+GET {{baseUrl}}/api/admin/kitchen?date=2026-10-18
+
+### 21. Admin Rooms (List & Create)
+GET {{baseUrl}}/api/admin/rooms
+
+POST {{baseUrl}}/api/admin/rooms
+Content-Type: application/json
+
+{
+  "name": "VIP Lounge",
+  "slug": "vip-lounge",
+  "location": "Lantai 2",
+  "minGuests": 2,
+  "maxGuests": 8,
+  "facilities": ["AC", "Sofa", "Smart TV"]
+}
+
+### 22. Admin Rooms (Update & Archive)
+PATCH {{baseUrl}}/api/admin/rooms/room_id_here
+Content-Type: application/json
+
+{
+  "description": "Ruangan VIP yang nyaman untuk meeting santai"
+}
+
+DELETE {{baseUrl}}/api/admin/rooms/room_id_here
+
+### 23. Admin Room Blocks
+GET {{baseUrl}}/api/admin/rooms/room_id_here/blocks
+
+POST {{baseUrl}}/api/admin/rooms/room_id_here/blocks
+Content-Type: application/json
+
+{
+  "startAt": "2026-10-25T00:00:00+07:00",
+  "endAt": "2026-10-26T00:00:00+07:00",
+  "reason": "Perawatan rutin AC"
+}
+
+DELETE {{baseUrl}}/api/admin/blocks/block_id_here
+
+### 24. Admin Categories
+GET {{baseUrl}}/api/admin/categories
+
+POST {{baseUrl}}/api/admin/categories
+Content-Type: application/json
+
+{
+  "name": "Pastry",
+  "kind": "FOOD",
+  "sortOrder": 5
+}
+
+PATCH {{baseUrl}}/api/admin/categories/category_id_here
+Content-Type: application/json
+
+{
+  "name": "Artisan Pastry"
+}
+
+DELETE {{baseUrl}}/api/admin/categories/category_id_here
+
+### 25. Admin Products
+GET {{baseUrl}}/api/admin/products
+
+POST {{baseUrl}}/api/admin/products
+Content-Type: application/json
+
+{
+  "categoryId": "category_id_here",
+  "name": "Croissant Butter",
+  "description": "Flaky French butter croissant",
+  "basePrice": 25000,
+  "options": []
+}
+
+PATCH {{baseUrl}}/api/admin/products/product_id_here
+Content-Type: application/json
+
+{
+  "basePrice": 28000
+}
+
+DELETE {{baseUrl}}/api/admin/products/product_id_here
+
+### 26. Admin Settings
+GET {{baseUrl}}/api/admin/settings
+
+PATCH {{baseUrl}}/api/admin/settings
+Content-Type: application/json
+
+{
+  "markupBps": 300,
+  "openTime": "10:00",
+  "closeTime": "22:00",
+  "paymentExpiryMinutes": 15,
+  "holdMinutes": 17,
+  "cafeWhatsapp": "6281234567890"
 }

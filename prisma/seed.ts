@@ -1,6 +1,7 @@
 import { PrismaClient, CategoryKind } from "@prisma/client";
 import fs from "node:fs";
 import path from "node:path";
+import { seedAdminUser } from "../src/server/auth";
 
 const prisma = new PrismaClient();
 
@@ -155,6 +156,13 @@ export async function seed(db = prisma) {
       });
     }
   }
+
+  // 5. Admin
+  await seedAdminUser(
+    process.env.ADMIN_SEED_EMAIL,
+    process.env.ADMIN_SEED_PASSWORD,
+    db
+  );
 }
 
 if (process.argv[1] && process.argv[1].endsWith("seed.ts")) {
