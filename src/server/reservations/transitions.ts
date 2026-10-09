@@ -355,6 +355,13 @@ export async function rescheduleReservation(
       }
 
       // Update jadwal reservasi
+      let servingAt = res.servingAt;
+      if (res.servingTime === "CUSTOM" && res.servingAt) {
+        const offset = res.servingAt.getTime() - res.startAt.getTime();
+        const shifted = new Date(sched.startAt.getTime() + offset);
+        servingAt = shifted >= sched.startAt && shifted < sched.endAt ? shifted : sched.startAt;
+      }
+
       const updated = await tx.reservation.update({
         where: { id: reservationId },
         data: {
@@ -362,6 +369,7 @@ export async function rescheduleReservation(
           startAt: sched.startAt,
           endAt: sched.endAt,
           blockEndAt: sched.blockEndAt,
+          servingAt,
         },
       });
 

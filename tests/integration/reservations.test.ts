@@ -187,6 +187,16 @@ describe("Reservations Integration Tests (Day 1)", () => {
       { gateway: fakeGateway, now: pastNow, db: prisma }
     );
 
+    // Before hold expires (e.g. at 10:05), room availability returns BOOKED
+    const activeAvail = await getAvailability(
+      { date: "2026-10-18", start: "10:00", end: "12:00", guests: 5 },
+      wibDateTime("2026-10-16", "10:05"),
+      prisma
+    );
+    const loftBooked = activeAvail.rooms.find((r) => r.id === testRoomId);
+    expect(loftBooked?.available).toBe(false);
+    expect(loftBooked?.reason).toBe("BOOKED");
+
     // Later at 10:30 (hold time has expired)
     const laterNow = wibDateTime("2026-10-16", "10:30");
 

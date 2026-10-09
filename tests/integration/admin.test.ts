@@ -30,6 +30,7 @@ import {
   InvalidTransitionError,
   SlotTakenError,
 } from "@/server/http";
+import { wibDateTime } from "@/server/time";
 
 // Next.js Route handlers to test end-to-end admin session verification
 import { GET as getAdminReservationsRoute } from "@/app/api/admin/reservations/route";
@@ -335,6 +336,38 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
       }
     );
     expect(res3.code).toBeDefined();
+  });
+
+  it("Reschedule shifts custom servingAt accurately and clamps if out of range", async () => {
+    const customServing = wibDateTime("2026-10-18", "10:45"); // 45 min after 10:00 start
+
+    const res = await createTestRes("2026-10-18", "10:00", "12:00");
+    await prisma.reservation.update({
+      where: { id: res.id },
+      data: {
+        status: "CONFIRMED",
+        servingTime: "CUSTOM",
+        servingAt: customServing,
+      },
+    });
+
+    const rescheduled = await rescheduleReservation(
+      res.id,
+      {
+        roomId: testRoomId,
+        date: "2026-10-19",
+        start: "14:00",
+        end: "16:00",
+      },
+      adminUserId,
+      new Date("2026-10-10T10:00:00+07:00"),
+      prisma
+    );
+
+    expect(rescheduled.servingTime).toBe("CUSTOM");
+    // Should be shifted by 45 minutes from new start (14:00 -> 14:45)
+    const expectedServing = wibDateTime("2026-10-19", "14:45");
+    expect(rescheduled.servingAt?.toISOString()).toBe(expectedServing.toISOString());
   });
 
   // #5. Block conflicts
