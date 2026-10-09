@@ -334,4 +334,23 @@ describe("Reservations Integration Tests (Day 1)", () => {
       )
     ).rejects.toThrow(RoomUnavailableError);
   });
+
+  it("9. Custom serving time passed as HH:mm string parses into correct WIB DateTime", async () => {
+    const fixedNow = wibDateTime("2026-10-16", "10:00");
+    const result = await createReservation(
+      {
+        ...baseInput,
+        roomId: testRoomId,
+        items: getValidItems(),
+        servingTime: "CUSTOM",
+        servingAt: "11:30",
+      },
+      { gateway: fakeGateway, now: fixedNow, db: prisma }
+    );
+
+    const saved = await prisma.reservation.findUnique({ where: { code: result.code } });
+    expect(saved?.servingTime).toBe("CUSTOM");
+    expect(saved?.servingAt).toBeDefined();
+    expect(saved?.servingAt?.toISOString()).toBe(wibDateTime("2026-10-18", "11:30").toISOString());
+  });
 });

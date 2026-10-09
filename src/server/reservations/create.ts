@@ -14,6 +14,7 @@ import {
   RoomUnavailableError,
   PaymentGatewayError,
 } from "../http";
+import { wibDateTime } from "../time";
 import { ServingTime, Reservation } from "@prisma/client";
 
 export interface CreateReservationInput {
@@ -97,10 +98,14 @@ export async function createReservation(
     if (!input.servingAt) {
       throw new CartRuleError("Waktu penyajian khusus wajib diisi.");
     }
-    servingAtDate =
-      input.servingAt instanceof Date
-        ? input.servingAt
-        : new Date(input.servingAt);
+    if (typeof input.servingAt === "string" && /^\d{2}:\d{2}$/.test(input.servingAt)) {
+      servingAtDate = wibDateTime(input.date, input.servingAt);
+    } else {
+      servingAtDate =
+        input.servingAt instanceof Date
+          ? input.servingAt
+          : new Date(input.servingAt);
+    }
 
     if (
       isNaN(servingAtDate.getTime()) ||

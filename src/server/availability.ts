@@ -45,7 +45,12 @@ export async function getAvailability(
     where: { isArchived: false },
     orderBy: { sortOrder: "asc" },
     include: {
-      blocks: true,
+      blocks: {
+        where: {
+          startAt: { lt: endAt },
+          OR: [{ endAt: null }, { endAt: { gt: startAt } }],
+        },
+      },
       reservations: {
         where: {
           status: { in: ["PENDING_PAYMENT", "CONFIRMED", "CHECKED_IN"] },

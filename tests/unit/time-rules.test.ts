@@ -116,4 +116,18 @@ describe("time-rules.ts R-T rules", () => {
     expect(tooFar.ok).toBe(false);
     if (!tooFar.ok) expect(tooFar.rule).toBe("R-T5");
   });
+
+  it("R-T5: rejects reservations in the past with clear message", () => {
+    const now = wibDateTime("2026-10-10", "10:00");
+    const past = validateSchedule(
+      { date: "2026-10-09", start: "10:00", end: "12:00" },
+      defaultSettings,
+      now
+    );
+    expect(past.ok).toBe(false);
+    if (!past.ok) {
+      expect(past.rule).toBe("R-T5");
+      expect(past.message).toBe("Tanggal reservasi tidak boleh di masa lalu.");
+    }
+  });
 });

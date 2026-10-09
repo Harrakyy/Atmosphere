@@ -82,9 +82,22 @@ export function validateSchedule(
     };
   }
 
-  // R-T4: Batas paling lambat pesan (H-leadDays pukul leadCutoffTime)
+  const nowWib = toWib(now);
+  const [todayYear, todayMonth, todayDay] = nowWib.dateStr.split("-").map(Number);
+  const todayUtc = Date.UTC(todayYear, todayMonth - 1, todayDay);
   const [resYear, resMonth, resDay] = input.date.split("-").map(Number);
   const resDateUtc = Date.UTC(resYear, resMonth - 1, resDay);
+
+  // Cek tanggal lampau
+  if (resDateUtc < todayUtc) {
+    return {
+      ok: false,
+      rule: "R-T5",
+      message: "Tanggal reservasi tidak boleh di masa lalu.",
+    };
+  }
+
+  // R-T4: Batas paling lambat pesan (H-leadDays pukul leadCutoffTime)
   const cutoffDateUtc = resDateUtc - leadDays * 24 * 60 * 60 * 1000;
   const cutoffDate = new Date(cutoffDateUtc);
   const cutoffDateStr = `${cutoffDate.getUTCFullYear()}-${String(cutoffDate.getUTCMonth() + 1).padStart(2, "0")}-${String(cutoffDate.getUTCDate()).padStart(2, "0")}`;
@@ -99,12 +112,8 @@ export function validateSchedule(
   }
 
   // R-T5: Batas paling jauh pesan (hari ini + maxAdvanceDays)
-  const nowWib = toWib(now);
-  const [todayYear, todayMonth, todayDay] = nowWib.dateStr.split("-").map(Number);
-  const todayUtc = Date.UTC(todayYear, todayMonth - 1, todayDay);
   const maxAdvanceUtc = todayUtc + maxAdvanceDays * 24 * 60 * 60 * 1000;
-
-  if (resDateUtc > maxAdvanceUtc || resDateUtc < todayUtc) {
+  if (resDateUtc > maxAdvanceUtc) {
     return {
       ok: false,
       rule: "R-T5",
