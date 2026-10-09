@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 
-export const dynamic = "force-dynamic";
 import { availabilityQuerySchema } from "@/contracts";
 import { getAvailability } from "@/server/availability";
 import { ok, handleError } from "@/server/http";
