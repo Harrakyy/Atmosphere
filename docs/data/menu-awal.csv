@@ -1,0 +1,81 @@
+kategori,jenis,nama,pilihan,harga_kasir,catatan_perapian
+Makanan,FOOD,Pasta Aglio Olio,,27000,
+Makanan,FOOD,Pasta Bolognese,,27000,
+Makanan,FOOD,Pasta Carbonara,,27000,
+Makanan,FOOD,Rice Bowl Beef Teriyaki,,27000,
+Makanan,FOOD,Rice Bowl Chicken Sambel Matah,,20000,
+Makanan,FOOD,Rice Bowl Saikoro Garlic Butter,,27000,
+Makanan,FOOD,Rice Bowl Beef Bulgogi,,27000,
+Makanan,FOOD,Rice Bowl Chicken Nanban,,25000,
+Makanan,FOOD,Rice Bowl Chicken Garlic Butter,,22000,
+Makanan,FOOD,Rice Bowl Ayam Geprek,,22000,
+Makanan,FOOD,Beef Hamburg Steak,Saos Mushroom|Saos Blackpepper|Saos Barbeque,35000,pilihan saos dipindah dari kolom keterangan
+Makanan,FOOD,Chicken Crispy Steak,Saos Mushroom|Saos Blackpepper|Saos Barbeque,25000,pilihan saos dipindah dari kolom keterangan
+Makanan,FOOD,Mac & Cheese,,27000,
+Makanan,FOOD,Bakso Campur,,19000,
+Makanan,FOOD,Nasi Ayam Kremes,,17000,
+Makanan,FOOD,Nasi Ayam Bakar,,17000,
+Makanan,FOOD,Nasi Ayam Kalasan,,19000,
+Makanan,FOOD,Nasi Soto Ayam,,15000,
+Makanan,FOOD,Nasi Lele Goreng,,18000,
+Makanan,FOOD,Nasi Lele Bakar,,20000,
+Makanan,FOOD,Nasi Nila Goreng,,23000,
+Makanan,FOOD,Nasi Nila Bakar,,25000,
+Makanan,FOOD,Nasi Goreng Jawa,,17000,
+Makanan,FOOD,Mie Goreng Jawa,,17000,
+Makanan,FOOD,Nasi Goreng Magelangan,,19000,
+Makanan,FOOD,Mie Ayam Chili Oil,,25000,
+Makanan,FOOD,Mie Ayam Katsu,,25000,
+Makanan,FOOD,Indomie Ori,Kuah|Goreng,9000,asal: Indomie Kuah/Goreng ORI
+Makanan,FOOD,Indomie Telor,Kuah|Goreng,12000,asal: Indomie Kuah/Goreng Telor
+Snack,FOOD,Mendoan,,10000,
+Snack,FOOD,Roti Bakar (Coklat / Keju),Coklat|Keju,10000,asal: Roti Bakar Coklat/Keju - nama perlu konfirmasi mitra
+Snack,FOOD,Roti Bakar (Coklat Keju / Nutella / Skippy),Coklat Keju|Nutella|Skippy,15000,asal: Roti Bakar Coklat Keju/Nutela/Skippy - typo Nutela diperbaiki
+Snack,FOOD,Pisang Bakar (Coklat / Keju),Coklat|Keju,12000,asal: Pisang Bakar Coklat/Keju
+Snack,FOOD,Pisang Bakar Coklat Keju,,15000,produk berbeda dari baris sebelumnya (isi coklat + keju)
+Snack,FOOD,Pisang Goreng Karamel,,15000,
+Snack,FOOD,Pisang Goreng Keju,,15000,
+Snack,FOOD,French Fries,,15000,
+Snack,FOOD,Snack Platter,,20000,typo Plater diperbaiki
+Snack,FOOD,Cheese Bite,,17000,
+Snack,FOOD,Cireng,,10000,
+Snack,FOOD,Mac Nugget,,17000,
+Snack,FOOD,Singkong Ori,,15000,
+Snack,FOOD,Singkong Keju,,18000,
+Snack,FOOD,Singkong Spicy,,18000,
+Snack,FOOD,Tahu Aci Mini,,15000,
+Snack,FOOD,Dimsum Rendang,,18000,
+Snack,FOOD,Sosis Roll,,18000,
+Minuman,DRINK,Jeruk,Hot|Ice,15000,asal: Jeruk Hot/Ice
+Minuman,DRINK,Chocolate,Hot|Ice,20000,asal: Chocolate Hot/Ice
+Minuman,DRINK,Matcha Latte,Hot|Ice,20000,asal: Matcha Latte Hot/Ice
+Minuman,DRINK,Taro Latte,Hot|Ice,20000,asal: Taro Latte Hot/Ice
+Minuman,DRINK,Mango Yakult,,20000,
+Minuman,DRINK,Leci Yakult,,20000,
+Minuman,DRINK,Melon Yakult,,20000,
+Minuman,DRINK,Korean Strawberry Milk,,25000,
+Minuman,DRINK,Choco Matcha Ice,,23000,hanya Ice - tidak perlu pilihan
+Minuman,DRINK,Air Mineral,,5000,
+Minuman,DRINK,Teh Tawar,Hot|Ice,5000,asal: Teh Tawar Ice/Hot
+Minuman,DRINK,Teh Manis,Hot|Ice,8000,asal: Teh Manis Hot/Ice
+Minuman,DRINK,Lemon Tea,Hot|Ice,17000,asal: Lemon Tea Hot/Ice
+Minuman,DRINK,Teh Telang,Hot|Ice,15000,asal: Teh Telang Hot/Ice
+Minuman,DRINK,Kopi Tubruk,Hot|Ice,12000,asal: Kopi Tubruk Hot/Ice
+Minuman,DRINK,Kopi Tubruk Susu,Hot|Ice,15000,asal: Kopi Tubruk Susu Hot/Ice
+Minuman,DRINK,Vietnam Drip,,19000,
+Minuman,DRINK,Coffee Latte,Hot|Ice,21000,asal: Coffee Latte Hot/Ice
+Minuman,DRINK,Salted Caramel,Hot|Ice,23000,asal: Salted Caramel Hot/Ice
+Minuman,DRINK,Butterscotch,Hot|Ice,23000,asal: Butterscotch Hot/Ice
+Minuman,DRINK,Hazelnut,Hot|Ice,23000,asal: Hazelnut Hot/Ice
+Minuman,DRINK,Mocachino,Hot|Ice,23000,asal: Mocachino Hot/Ice - ejaan dipertahankan sesuai mitra
+Minuman,DRINK,Coffee Pandan Latte Ice,,23000,hanya Ice - tidak perlu pilihan
+Minuman,DRINK,Rainbow Squash,,19000,
+Minuman,DRINK,Orange Squash,,19000,
+Minuman,DRINK,Melon Squash,,19000,
+Minuman,DRINK,Bluemount Squash,,23000,
+Minuman,DRINK,Orange Blue Squash,,25000,
+Minuman,DRINK,Leci Tea,,19000,
+Minuman,DRINK,Thai Tea,,19000,
+Ice Cream,FOOD,Ice Cup,Vanilla|Coklat|Strawberry|Lotus Biscoff|Greentea|Cappuccino|Cookies and Cream,9000,typo Vanila/Strawbery/Cappucino diperbaiki - jenis FOOD = asumsi
+Ice Cream,FOOD,Ice Cup Durian,,13000,hanya rasa Durian - tidak perlu pilihan
+Ice Cream,FOOD,Ice Cream Cupcake,Black Forest|Vanilla Chip|Lotus Biscoff|Cookies and Cream|Strawberry Cheesecake|Matcha,15000,typo Blackfores diperbaiki

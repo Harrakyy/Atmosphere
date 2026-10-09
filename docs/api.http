@@ -1,0 +1,57 @@
+### Atmosphere Cafe - Manual API Testing (Hari 1)
+@baseUrl = http://localhost:3000
+
+### 1. Get Public Menu
+GET {{baseUrl}}/api/menu
+
+### 2. Check Availability
+GET {{baseUrl}}/api/availability?date=2026-10-18&start=10:00&end=12:00&guests=4
+
+### 3. Check Day Busy Slots
+# Ganti roomId dengan ID ruangan dari endpoint availability
+GET {{baseUrl}}/api/availability/day?roomId=cm0loft0001&date=2026-10-18
+
+### 4. Create Reservation
+# @name createReservation
+POST {{baseUrl}}/api/reservations
+Content-Type: application/json
+
+{
+  "roomId": "cm0loft0001",
+  "date": "2026-10-18",
+  "start": "10:00",
+  "end": "12:00",
+  "guestCount": 4,
+  "items": [
+    {
+      "productId": "cm0pasta0001",
+      "option": null,
+      "quantity": 2
+    },
+    {
+      "productId": "cm0jeruk0001",
+      "option": "Ice",
+      "quantity": 2
+    }
+  ],
+  "servingTime": "ON_ARRIVAL",
+  "kitchenNote": "Tolong jangan terlalu pedas",
+  "customer": {
+    "name": "Budi Santoso",
+    "phone": "081234567890",
+    "email": "budi@example.com"
+  }
+}
+
+### 5. Get Ticket by Token
+# Ganti {ticketToken} dengan token yang didapatkan dari response createReservation
+GET {{baseUrl}}/api/tickets/sample-ticket-token-32-chars-long
+
+### 6. Lookup Ticket by Code & Phone
+POST {{baseUrl}}/api/tickets/lookup
+Content-Type: application/json
+
+{
+  "code": "ATM-7K2F9Q",
+  "phone": "0812-3456-7890"
+}

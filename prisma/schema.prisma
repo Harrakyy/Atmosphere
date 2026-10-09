@@ -1,0 +1,198 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum CategoryKind {
+  FOOD
+  DRINK
+}
+
+enum ReservationStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  CHECKED_IN
+  COMPLETED
+  EXPIRED
+  CANCELLED
+  NO_SHOW
+}
+
+enum ServingTime {
+  ON_ARRIVAL
+  AFTER_30_MIN
+  CUSTOM
+}
+
+enum CancelledBy {
+  CAFE
+  CUSTOMER
+  SYSTEM
+}
+
+enum RefundStatus {
+  NONE
+  PENDING
+  DONE
+}
+
+model Setting {
+  id                   Int      @id @default(1)
+  markupBps            Int      @default(300)
+  roundingUnit         Int      @default(500)
+  vaMinTotal           Int      @default(150000)
+  openTime             String   @default("10:00") // HH:mm WIB
+  closeTime            String   @default("22:00")
+  slotStepMinutes      Int      @default(30)
+  minDurationMinutes   Int      @default(60)
+  maxDurationMinutes   Int      @default(240)
+  bufferMinutes        Int      @default(30)
+  leadDays             Int      @default(1)
+  leadCutoffTime       String   @default("21:00")
+  maxAdvanceDays       Int      @default(30)
+  holdMinutes          Int      @default(17)
+  paymentExpiryMinutes Int      @default(15)
+  cafeWhatsapp         String   @default("") // format 62…
+  updatedAt            DateTime @updatedAt @db.Timestamptz(3)
+}
+
+model Room {
+  id           String        @id @default(cuid())
+  name         String
+  slug         String        @unique
+  description  String?
+  location     String? // contoh: "Lantai 2"
+  minGuests    Int
+  maxGuests    Int
+  facilities   String[] // contoh: ["TV","AC","Stopkontak"]
+  photoUrl     String?
+  sortOrder    Int           @default(0)
+  isArchived   Boolean       @default(false)
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @db.Timestamptz(3)
+  blocks       RoomBlock[]
+  reservations Reservation[]
+}
+
+model RoomBlock {
+  id          String    @id @default(cuid())
+  roomId      String
+  startAt     DateTime  @db.Timestamptz(3)
+  endAt       DateTime? @db.Timestamptz(3) // null = sampai waktu yang belum ditentukan
+  reason      String
+  createdById String
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  room        Room      @relation(fields: [roomId], references: [id])
+
+  @@index([roomId, startAt])
+}
+
+model Category {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  kind      CategoryKind
+  sortOrder Int          @default(0)
+  isActive  Boolean      @default(true)
+  products  Product[]
+}
+
+model Product {
+  id          String            @id @default(cuid())
+  categoryId  String
+  name        String
+  description String?
+  basePrice   Int // harga kasir
+  options     String[] // kosong = tanpa pilihan
+  label       String? // "Best Seller" | "Chef Special" | null
+  photoUrl    String?
+  isAvailable Boolean           @default(true)
+  isArchived  Boolean           @default(false)
+  sortOrder   Int               @default(0)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime          @updatedAt @db.Timestamptz(3)
+  category    Category          @relation(fields: [categoryId], references: [id])
+  items       ReservationItem[]
+
+  @@index([categoryId])
+}
+
+model Reservation {
+  id              String            @id @default(cuid())
+  code            String            @unique
+  ticketToken     String            @unique
+  roomId          String
+  startAt         DateTime          @db.Timestamptz(3)
+  endAt           DateTime          @db.Timestamptz(3)
+  blockEndAt      DateTime          @db.Timestamptz(3) // endAt + buffer
+  guestCount      Int
+  customerName    String
+  customerPhone   String // sudah dinormalisasi 62…
+  customerEmail   String?
+  servingTime     ServingTime
+  servingAt       DateTime?         @db.Timestamptz(3)
+  kitchenNote     String?
+  status          ReservationStatus @default(PENDING_PAYMENT)
+  totalAmount     Int // harga online
+  baseTotal       Int // harga kasir (untuk info)
+  holdExpiresAt   DateTime          @db.Timestamptz(3)
+  snapToken       String?
+  snapRedirectUrl String?
+  paymentType     String?
+  paidAt          DateTime?         @db.Timestamptz(3)
+  checkedInAt     DateTime?         @db.Timestamptz(3)
+  completedAt     DateTime?         @db.Timestamptz(3)
+  cancelledAt     DateTime?         @db.Timestamptz(3)
+  cancelledBy     CancelledBy?
+  cancelReason    String?
+  refundStatus    RefundStatus      @default(NONE)
+  refundAmount    Int               @default(0)
+  refundNote      String?
+  createdAt       DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime          @updatedAt @db.Timestamptz(3)
+  room            Room              @relation(fields: [roomId], references: [id])
+  items           ReservationItem[]
+
+  @@index([roomId, startAt])
+  @@index([status, startAt])
+}
+
+model ReservationItem {
+  id            String       @id @default(cuid())
+  reservationId String
+  productId     String
+  productName   String // snapshot
+  option        String? // snapshot
+  kind          CategoryKind // snapshot
+  unitPrice     Int // snapshot harga online
+  basePrice     Int // snapshot harga kasir
+  quantity      Int
+  lineTotal     Int
+  reservation   Reservation  @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  product       Product      @relation(fields: [productId], references: [id])
+}
+
+model PaymentNotification {
+  id                String   @id @default(cuid())
+  orderId           String
+  transactionStatus String
+  signatureValid    Boolean
+  payload           Json
+  receivedAt        DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([orderId])
+}
+
+model ActivityLog {
+  id            String   @id @default(cuid())
+  actorId       String? // null = sistem/webhook
+  reservationId String?
+  action        String // contoh: RESERVATION_CREATED, PAYMENT_CONFIRMED, CHECKED_IN, CANCELLED, REFUND_DONE, BLOCK_CREATED …
+  detail        Json?
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([reservationId])
+}
