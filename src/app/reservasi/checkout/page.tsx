@@ -171,6 +171,10 @@ export default function CheckoutPage() {
   };
 
   const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "SB-Mid-client-placeholder";
+  const snapScriptUrl =
+    process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === "true"
+      ? "https://app.midtrans.com/snap/snap.js"
+      : "https://app.sandbox.midtrans.com/snap/snap.js";
 
   const formatTimer = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -182,7 +186,7 @@ export default function CheckoutPage() {
     <div className="min-h-screen flex flex-col bg-[#F3F2EF]">
       {/* Midtrans Snap Script */}
       <Script
-        src="https://app.sandbox.midtrans.com/snap/snap.js"
+        src={snapScriptUrl}
         data-client-key={clientKey}
         strategy="lazyOnload"
       />
