@@ -351,4 +351,37 @@ describe("Webhook & Status Transitions Integration Tests (Day 2)", () => {
     const updated = await prisma.reservation.findUnique({ where: { id: res.id } });
     expect(updated?.status).toBe("EXPIRED");
   });
+
+  it("Late payment on EXPIRED reservation with mismatched gross amount is rejected without confirming", async () => {
+    const res = await createTestReservation("2026-10-18", "18:00", "20:00");
+    await prisma.reservation.update({
+      where: { id: res.id },
+      data: { status: "EXPIRED" },
+    });
+
+    const mockGateway: PaymentGateway = {
+      async createPayment() {
+        return { token: "token", redirectUrl: "url" };
+      },
+      async verifyNotification() {
+        return {
+          valid: true,
+          orderId: res.code,
+          status: "PAID",
+          grossAmount: res.totalAmount - 10000,
+          paymentType: "qris",
+          raw: {},
+        };
+      },
+    };
+
+    const result = await handleNotification(
+      { order_id: res.code },
+      { gateway: mockGateway, db: prisma }
+    );
+    expect(result.mismatch).toBe(true);
+
+    const unchanged = await prisma.reservation.findUnique({ where: { id: res.id } });
+    expect(unchanged?.status).toBe("EXPIRED");
+  });
 });

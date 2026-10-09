@@ -10,6 +10,9 @@ export default defineConfig({
       DATABASE_URL: process.env.DATABASE_URL_TEST || "postgresql://atm:atm@localhost:5433/atmosphere_test",
       PAYMENT_GATEWAY: "fake",
       NODE_ENV: "test",
+      BETTER_AUTH_SECRET: "dummy_test_secret_at_least_32_characters_long",
+      MIDTRANS_SERVER_KEY: "dummy_midtrans_server_key",
+      NEXT_PUBLIC_MIDTRANS_CLIENT_KEY: "dummy_midtrans_client_key",
     },
     coverage: {
       provider: "v8",

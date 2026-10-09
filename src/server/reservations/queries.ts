@@ -215,7 +215,10 @@ export async function getNeedsActionReservations(
     const resList = await db.reservation.findMany({
       where: {
         roomId: block.roomId,
-        status: { in: ["PENDING_PAYMENT", "CONFIRMED"] },
+        OR: [
+          { status: "CONFIRMED" },
+          { status: "PENDING_PAYMENT", holdExpiresAt: { gt: now } },
+        ],
         startAt: { gte: now },
         blockEndAt: { gt: block.startAt },
         ...(block.endAt ? { startAt: { lt: block.endAt } } : {}),

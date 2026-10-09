@@ -4,15 +4,26 @@ import { getAdminReservations } from "@/server/reservations/queries";
 import { ok, handleError } from "@/server/http";
 import { ReservationStatus } from "@prisma/client";
 
+import { z } from "zod";
+
+const querySchema = z.object({
+  date: z.string().optional().nullable(),
+  status: z.nativeEnum(ReservationStatus).optional().nullable(),
+});
+
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin(request);
     const searchParams = request.nextUrl.searchParams;
-    const date = searchParams.get("date");
-    const statusParam = searchParams.get("status");
-    const status = statusParam ? (statusParam as ReservationStatus) : null;
+    const validated = querySchema.parse({
+      date: searchParams.get("date"),
+      status: searchParams.get("status") || undefined,
+    });
 
-    const data = await getAdminReservations({ date, status });
+    const data = await getAdminReservations({
+      date: validated.date,
+      status: validated.status,
+    });
     return ok(data);
   } catch (error) {
     return handleError(error);

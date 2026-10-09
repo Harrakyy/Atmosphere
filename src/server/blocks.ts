@@ -45,7 +45,10 @@ export async function createRoomBlock(
     const conflicts = await tx.reservation.findMany({
       where: {
         roomId,
-        status: { in: ["PENDING_PAYMENT", "CONFIRMED", "CHECKED_IN"] },
+        OR: [
+          { status: { in: ["CONFIRMED", "CHECKED_IN"] } },
+          { status: "PENDING_PAYMENT", holdExpiresAt: { gt: new Date() } },
+        ],
         blockEndAt: { gt: startAt },
         ...(endAt ? { startAt: { lt: endAt } } : {}),
       },

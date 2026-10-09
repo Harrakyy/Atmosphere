@@ -269,12 +269,15 @@ export async function createReservation(
 
   // 6. Di luar transaksi: Payment Gateway Snap Creation
   try {
-    const paymentItems = cart.items.map((item) => {
+    const paymentItems = cart.items.map((item, idx) => {
       const itemFullName = item.option
         ? `${item.productName} (${item.option})`
         : item.productName;
+      const uniqueId = item.option
+        ? `${item.productId}-${item.option}`
+        : `${item.productId}-${idx}`;
       return {
-        id: item.productId,
+        id: uniqueId.slice(0, 50),
         name: itemFullName.slice(0, 50),
         price: item.unitPrice,
         quantity: item.quantity,

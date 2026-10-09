@@ -108,11 +108,24 @@ export const adminUpdateRoomSchema = z
     }
   );
 
-export const adminCreateBlockSchema = z.object({
-  startAt: z.string().min(1, "Waktu mulai blokir wajib diisi"),
-  endAt: z.string().nullable().optional(),
-  reason: z.string().min(1, "Alasan blokir wajib diisi"),
-});
+export const adminCreateBlockSchema = z
+  .object({
+    startAt: z.string().min(1, "Waktu mulai blokir wajib diisi"),
+    endAt: z.string().nullable().optional(),
+    reason: z.string().min(1, "Alasan blokir wajib diisi"),
+  })
+  .refine(
+    (data) => {
+      if (data.endAt) {
+        return new Date(data.endAt).getTime() > new Date(data.startAt).getTime();
+      }
+      return true;
+    },
+    {
+      message: "Waktu selesai blokir (endAt) harus setelah waktu mulai (startAt)",
+      path: ["endAt"],
+    }
+  );
 
 export const adminCategorySchema = z.object({
   name: z.string().min(1, "Nama kategori wajib diisi"),

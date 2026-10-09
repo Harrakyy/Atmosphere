@@ -34,6 +34,8 @@ import {
 // Next.js Route handlers to test end-to-end admin session verification
 import { GET as getAdminReservationsRoute } from "@/app/api/admin/reservations/route";
 import { PATCH as patchSettingsRoute } from "@/app/api/admin/settings/route";
+import { POST as postBlocksRoute } from "@/app/api/admin/rooms/[id]/blocks/route";
+import { GET as getKitchenRoute } from "@/app/api/admin/kitchen/route";
 import { NextRequest } from "next/server";
 
 describe("Admin Backend Integration Tests (Day 2)", () => {
@@ -646,5 +648,76 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
 
     const byStatus = await getAdminReservations({ status: "PENDING_PAYMENT", date: "all" }, new Date(), prisma);
     expect(byStatus.some((r) => r.id === res.id)).toBe(true);
+  });
+
+  // Unique item IDs for multi-option items in Midtrans
+  it("Cart with multiple options of same product passes unique IDs to PaymentGateway", async () => {
+    let capturedItems: { id: string; name: string }[] = [];
+    const spyGateway: FakeGateway = new FakeGateway();
+    spyGateway.createPayment = async (input) => {
+      capturedItems = input.items;
+      return { token: "tok", redirectUrl: "url" };
+    };
+
+    await createReservation(
+      {
+        roomId: testRoomId,
+        date: "2026-10-18",
+        start: "10:00",
+        end: "12:00",
+        guestCount: 5,
+        items: [
+          { productId: foodProductId, option: null, quantity: 2 },
+          { productId: drinkProductId, option: "Ice", quantity: 1 },
+          { productId: drinkProductId, option: "Hot", quantity: 1 },
+        ],
+        servingTime: "ON_ARRIVAL",
+        customer: { name: "Budi", phone: "0812-3456-7890" },
+      },
+      {
+        gateway: spyGateway,
+        now: new Date("2026-10-10T10:00:00+07:00"),
+        db: prisma,
+      }
+    );
+
+    const itemIds = capturedItems.map((i) => i.id);
+    const uniqueIds = new Set(itemIds);
+    expect(uniqueIds.size).toBe(itemIds.length);
+  });
+
+  // Inverted room block dates
+  it("Creating room block with endAt <= startAt fails validation with 400", async () => {
+    const req = new NextRequest(`http://localhost:3000/api/admin/rooms/${testRoomId}/blocks`, {
+      method: "POST",
+      headers: { cookie: adminCookie },
+      body: JSON.stringify({
+        startAt: "2026-10-20T10:00:00+07:00",
+        endAt: "2026-10-19T10:00:00+07:00",
+        reason: "Invalid dates",
+      }),
+    });
+
+    const res = await postBlocksRoute(req, { params: Promise.resolve({ id: testRoomId }) });
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  // Admin query param validations
+  it("Admin reservations route returns 400 on invalid status param", async () => {
+    const req = new NextRequest("http://localhost:3000/api/admin/reservations?status=INVALID_STATUS", {
+      headers: { cookie: adminCookie },
+    });
+    const res = await getAdminReservationsRoute(req);
+    expect(res.status).toBe(400);
+  });
+
+  it("Admin kitchen route returns 400 on invalid date format param", async () => {
+    const req = new NextRequest("http://localhost:3000/api/admin/kitchen?date=invalid-date", {
+      headers: { cookie: adminCookie },
+    });
+    const res = await getKitchenRoute(req);
+    expect(res.status).toBe(400);
   });
 });

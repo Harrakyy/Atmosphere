@@ -60,22 +60,22 @@ export async function handleNotification(
 
   // 4. Proses status PAID
   if (verified.status === "PAID") {
-    if (res.status === "PENDING_PAYMENT") {
-      // R-PAY4: Gross amount mismatch check
-      if (verified.grossAmount !== res.totalAmount) {
-        await db.activityLog.create({
-          data: {
-            reservationId: res.id,
-            action: "PAYMENT_AMOUNT_MISMATCH",
-            detail: {
-              expected: res.totalAmount,
-              received: verified.grossAmount,
-            },
+    // R-PAY4: Gross amount mismatch check
+    if (verified.grossAmount !== res.totalAmount) {
+      await db.activityLog.create({
+        data: {
+          reservationId: res.id,
+          action: "PAYMENT_AMOUNT_MISMATCH",
+          detail: {
+            expected: res.totalAmount,
+            received: verified.grossAmount,
           },
-        });
-        return { received: true, mismatch: true };
-      }
+        },
+      });
+      return { received: true, mismatch: true };
+    }
 
+    if (res.status === "PENDING_PAYMENT") {
       await confirmReservation(
         res.id,
         { paidAt: new Date(), paymentType: verified.paymentType },
