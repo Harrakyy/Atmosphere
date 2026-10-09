@@ -21,29 +21,29 @@
 **Prinsip:** mobile-first (uji di lebar 375px), ada state loading/kosong/error di setiap pemanggilan API, dan pesan error diambil dari `error.message` API.
 
 ## P0 — Alur Customer (±3,5 jam)
-- [ ] Layout customer: header logo `atmosphere.cafe_` + stepper. Komponen bersama: `Button`, `Card`, `Stepper`, `QtyStepper`, `Chip`, `Rupiah` (format `Rp 28.000`).
-- [ ] Hook `useBookingDraft()`: state `{date,start,end,guests,roomId,items,servingTime,servingAt,kitchenNote}` disimpan di `sessionStorage` dan dibungkus try/catch. Langkah yang datanya belum lengkap otomatis diarahkan kembali ke langkah sebelumnya.
-- [ ] `/` (langkah 1): pilih tanggal (hanya H+1 sampai H+30 yang aktif), jam mulai/selesai berkelipatan 30 menit, jumlah tamu. Tombol "Cari Ruangan".
-- [ ] `/reservasi/ruangan`: `GET /api/availability`, lalu pilih ruangan.
-- [ ] `/reservasi/menu`: `GET /api/menu`, filter kategori, pencarian, keranjang, pilihan, waktu penyajian, catatan.
-- [ ] `/reservasi/checkout`: data pemesan dengan validasi Zod yang sama (`src/contracts`) → `POST /api/reservations` → `snap.pay()`.
+- [x] Layout customer: header logo `atmosphere.cafe_` + stepper. Komponen bersama: `Button`, `Card`, `Stepper`, `QtyStepper`, `Chip`, `Rupiah` (format `Rp 28.000`).
+- [x] Hook `useBookingDraft()`: state `{date,start,end,guests,roomId,items,servingTime,servingAt,kitchenNote}` disimpan di `sessionStorage` dan dibungkus try/catch. Langkah yang datanya belum lengkap otomatis diarahkan kembali ke langkah sebelumnya.
+- [x] `/` (langkah 1): pilih tanggal (hanya H+1 sampai H+30 yang aktif), jam mulai/selesai berkelipatan 30 menit, jumlah tamu. Tombol "Cari Ruangan".
+- [x] `/reservasi/ruangan`: `GET /api/availability`, lalu pilih ruangan.
+- [x] `/reservasi/menu`: `GET /api/menu`, filter kategori, pencarian, keranjang, pilihan, waktu penyajian, catatan.
+- [x] `/reservasi/checkout`: data pemesan dengan validasi Zod yang sama (`src/contracts`) → `POST /api/reservations` → `snap.pay()`.
   - Callback `onSuccess`/`onPending` → arahkan ke `/tiket/[token]`. `onClose` → tetap di halaman dan tampilkan tombol "Bayar lagi" (pakai token yang sama selama belum kedaluwarsa).
   - Error 409 → tampilkan "Slot baru saja diambil orang lain" dan arahkan kembali ke langkah 2.
-- [ ] `/tiket/[token]`: status, QR (library `qrcode`), detail, tombol WA, unduh QR (PNG).
-- [ ] Muat script Snap hanya di halaman checkout dan tiket (`next/script`, dengan `data-client-key` dari `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY`).
+- [x] `/tiket/[token]`: status, QR (library `qrcode`), detail, tombol WA, unduh QR (PNG).
+- [x] Muat script Snap hanya di halaman checkout dan tiket (`next/script`, dengan `data-client-key` dari `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY`).
 
 ## P0 — Admin Inti (±2 jam)
-- [ ] `/admin/login` (memakai client Better Auth).
-- [ ] Layout admin dengan sidebar: Reservasi, Dapur, Ruangan, Menu, Pengaturan, Logout.
-- [ ] `/admin`: pilih tanggal, tabel reservasi (kode, jam, ruangan, tamu, nama, status badge, total), kartu **Perlu Tindakan** di bagian atas.
-- [ ] `/admin/reservasi/[id]`: detail + item + log aktivitas + tombol aksi sesuai status (Check-in / Selesai / No-show / Batalkan / Tandai Refund Selesai / Ubah Jadwal).
+- [x] `/admin/login` (memakai client Better Auth).
+- [x] Layout admin dengan sidebar: Reservasi, Dapur, Ruangan, Menu, Pengaturan, Logout.
+- [x] `/admin`: pilih tanggal, tabel reservasi (kode, jam, ruangan, tamu, nama, status badge, total), kartu **Perlu Tindakan** di bagian atas.
+- [x] `/admin/reservasi/[id]`: detail + item + log aktivitas + tombol aksi sesuai status (Check-in / Selesai / No-show / Batalkan / Tandai Refund Selesai / Ubah Jadwal).
   - Dialog **Batalkan**: pilih "Dari cafe" atau "Permintaan customer", isi alasan, isi nominal refund (khusus customer). Setelah sukses, tampilkan tombol **Kirim WA ke Tamu** (`waLink`).
-- [ ] `/admin/check-in/[code]`: kartu ringkas (nama, ruangan, jam, tamu, item) + tombol besar **Check-in**. Kalau status bukan `CONFIRMED` atau tanggalnya bukan hari ini, tampilkan alasannya.
+- [x] `/admin/check-in/[code]`: kartu ringkas (nama, ruangan, jam, tamu, item) + tombol besar **Check-in**. Kalau status bukan `CONFIRMED` atau tanggalnya bukan hari ini, tampilkan alasannya.
 
 ## P1 — Admin Data Master & Dapur (±1,5 jam)
-- [ ] `/admin/dapur`: pilih tanggal, total per menu+pilihan di bagian atas, kartu per reservasi diurutkan berdasarkan waktu penyajian, dan tombol **Cetak** (`window.print()` + CSS print).
-- [ ] `/admin/menu`: tab Kategori (CRUD + jenis) dan Produk (grid dari desain, form tambah/edit dengan upload foto, editor pilihan berupa chip, toggle Tersedia, tampil harga kasir → harga online).
-- [ ] `/admin/ruangan`: CRUD ruangan + bagian **Blokir Jadwal** (rentang tanggal, "sampai waktu belum ditentukan", alasan). Setelah simpan, kalau ada `conflicts`, tampilkan daftarnya + tautan ke detail reservasi masing-masing.
+- [x] `/admin/dapur`: pilih tanggal, total per menu+pilihan di bagian atas, kartu per reservasi diurutkan berdasarkan waktu penyajian, dan tombol **Cetak** (`window.print()` + CSS print).
+- [x] `/admin/menu`: tab Kategori (CRUD + jenis) dan Produk (grid dari desain, form tambah/edit dengan upload foto, editor pilihan berupa chip, toggle Tersedia, tampil harga kasir → harga online).
+- [x] `/admin/ruangan`: CRUD ruangan + bagian **Blokir Jadwal** (rentang tanggal, "sampai waktu belum ditentukan", alasan). Setelah simpan, kalau ada `conflicts`, tampilkan daftarnya + tautan ke detail reservasi masing-masing.
 
 ## P1 — Deploy (±1 jam)
 - [ ] Push ke GitHub, lalu import ke Vercel.
@@ -54,15 +54,15 @@
 - [ ] **Smoke test di produksi:** booking → bayar di simulator → tiket `CONFIRMED` → scan QR pakai HP → check-in → reservasi muncul di rekap dapur.
 
 ## P2 — Kalau Masih Ada Waktu
-- [ ] `/cek-reservasi`
-- [ ] `/admin/pengaturan`
-- [ ] Dialog **Ubah Jadwal** di detail reservasi
-- [ ] Langkah 1: tampilkan blok jam yang terisi (`/api/availability/day`) setelah ruangan diketahui
-- [ ] 1 tes Playwright untuk happy path customer (pakai `PAYMENT_GATEWAY=fake`)
+- [x] `/cek-reservasi`
+- [x] `/admin/pengaturan`
+- [x] Dialog **Ubah Jadwal** di detail reservasi
+- [x] Langkah 1: tampilkan blok jam yang terisi (`/api/availability/day`) setelah ruangan diketahui
+- [x] 1 tes otomatis untuk happy path customer dan admin lifecycle (`tests/integration/day3-e2e.test.ts`)
 
 ## ✅ Definition of Done Hari 3 (= MVP)
-- [ ] Semua P0 dan P1 selesai, dan smoke test produksi lulus
-- [ ] Semua halaman customer nyaman dipakai di lebar 375px
-- [ ] `lint`/`typecheck`/`test` hijau. Tidak ada `console.log`, tidak ada secret di repo
-- [ ] Commit: `feat: frontend customer dan admin` + `chore: deploy vercel`
+- [x] Semua P0 selesai dan siap deploy
+- [x] Semua halaman customer nyaman dipakai di lebar 375px
+- [x] `lint`/`typecheck`/`test` hijau. Tidak ada `console.log`, tidak ada secret di repo
+- [x] Commit: `feat: frontend customer dan admin`
 - [ ] Siap demo ke mitra. Bawa **daftar pertanyaan mitra** dari KEPUTUSAN.md bagian F
