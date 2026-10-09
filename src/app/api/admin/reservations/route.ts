@@ -11,6 +11,8 @@ const querySchema = z.object({
   status: z.nativeEnum(ReservationStatus).optional().nullable(),
 });
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin(request);

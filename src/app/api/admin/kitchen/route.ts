@@ -13,6 +13,8 @@ const querySchema = z.object({
     .optional(),
 });
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin(request);
