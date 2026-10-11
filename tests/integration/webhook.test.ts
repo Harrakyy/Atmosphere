@@ -22,12 +22,13 @@ describe("Webhook & Status Transitions Integration Tests (Day 2)", () => {
     await prisma.product.deleteMany();
     await prisma.category.deleteMany();
     await prisma.room.deleteMany();
+    await prisma.setting.deleteMany();
 
     await seed(prisma);
 
     fakeGateway = new FakeGateway();
 
-    const room = await prisma.room.findFirst({ where: { slug: "the-loft" } });
+    const room = await prisma.room.findFirst({ where: { slug: "ruangan-1" } });
     testRoomId = room!.id;
 
     const food = await prisma.product.findFirst({ where: { name: "Pasta Aglio Olio" } });
@@ -126,6 +127,52 @@ describe("Webhook & Status Transitions Integration Tests (Day 2)", () => {
       where: { orderId: "NON-EXISTENT-CODE" },
     });
     expect(saved).not.toBeNull();
+  });
+
+  function paidGateway(orderId: string, grossAmount: number): PaymentGateway {
+    return {
+      async createPayment() {
+        return { token: "token", redirectUrl: "url" };
+      },
+      async verifyNotification() {
+        return { valid: true, orderId, status: "PAID", grossAmount, paymentType: "qris", raw: {} };
+      },
+    };
+  }
+
+  it("order_id bersufiks mengonfirmasi reservasi", async () => {
+    const res = await createTestReservation();
+    const orderId = `${res.code}-ab12cd34`;
+
+    await handleNotification(
+      { order_id: orderId, transaction_status: "settlement" },
+      { gateway: paidGateway(orderId, res.totalAmount), db: prisma }
+    );
+
+    const updated = await prisma.reservation.findUnique({ where: { id: res.id } });
+    expect(updated?.status).toBe("CONFIRMED");
+  });
+
+  it("order_id format lama (ATM-XXXXXX) tetap dipetakan ke reservasi", async () => {
+    const res = await createTestReservation();
+    await prisma.reservation.update({ where: { id: res.id }, data: { code: "ATM-OLD001" } });
+
+    await handleNotification(
+      { order_id: "ATM-OLD001", transaction_status: "settlement" },
+      { gateway: paidGateway("ATM-OLD001", res.totalAmount), db: prisma }
+    );
+
+    const updated = await prisma.reservation.findUnique({ where: { id: res.id } });
+    expect(updated?.status).toBe("CONFIRMED");
+  });
+
+  it("order_id bersufiks dengan kode tak dikenal → NotFoundError", async () => {
+    await expect(
+      handleNotification(
+        { order_id: "ZZZZ-00000000" },
+        { gateway: paidGateway("ZZZZ-00000000", 1000), db: prisma }
+      )
+    ).rejects.toThrow(NotFoundError);
   });
 
   it("Normal payment settlement updates status to CONFIRMED with paidAt and paymentType", async () => {

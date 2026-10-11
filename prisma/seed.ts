@@ -6,81 +6,21 @@ import { seedAdminUser } from "../src/server/auth";
 const prisma = new PrismaClient();
 
 export async function seed(db = prisma) {
-  // 1. Setting (id=1)
-  await db.setting.upsert({
-    where: { id: 1 },
-    update: {
-      markupBps: 300,
-      roundingUnit: 500,
-      vaMinTotal: 150000,
-      openTime: "10:00",
-      closeTime: "22:00",
-      slotStepMinutes: 30,
-      minDurationMinutes: 60,
-      maxDurationMinutes: 240,
-      bufferMinutes: 30,
-      leadDays: 1,
-      leadCutoffTime: "21:00",
-      maxAdvanceDays: 30,
-      holdMinutes: 17,
-      paymentExpiryMinutes: 15,
-      cafeWhatsapp: "6281234567890",
-    },
-    create: {
-      id: 1,
-      markupBps: 300,
-      roundingUnit: 500,
-      vaMinTotal: 150000,
-      openTime: "10:00",
-      closeTime: "22:00",
-      slotStepMinutes: 30,
-      minDurationMinutes: 60,
-      maxDurationMinutes: 240,
-      bufferMinutes: 30,
-      leadDays: 1,
-      leadCutoffTime: "21:00",
-      maxAdvanceDays: 30,
-      holdMinutes: 17,
-      paymentExpiryMinutes: 15,
-      cafeWhatsapp: "6281234567890",
-    },
-  });
+  // 1. Setting (id=1): nilai default dari skema. Upsert kosong supaya seed ulang tidak menimpa pengaturan admin
+  await db.setting.upsert({ where: { id: 1 }, update: {}, create: { id: 1 } });
 
-  // 2. Ruangan (3 ruangan sesuai §11 overview)
+  // 2. Ruangan: foto asli dari cafe di public/ruangan. Kapasitas & fasilitas masih asumsi (§11), bisa diubah admin
   const rooms = [
-    {
-      name: "The Loft",
-      slug: "the-loft",
-      location: "Lantai 2",
-      minGuests: 4,
-      maxGuests: 10,
-      facilities: ["TV", "AC", "Wi-Fi", "Stopkontak"],
-      sortOrder: 1,
-    },
-    {
-      name: "The Sunroom",
-      slug: "the-sunroom",
-      location: "Lantai 1",
-      minGuests: 2,
-      maxGuests: 6,
-      facilities: ["AC", "Wi-Fi", "Stopkontak"],
-      sortOrder: 2,
-    },
-    {
-      name: "Event Space",
-      slug: "event-space",
-      location: "Lantai 2",
-      minGuests: 10,
-      maxGuests: 30,
-      facilities: ["TV", "Mic", "AC", "Wi-Fi", "Stopkontak"],
-      sortOrder: 3,
-    },
-  ];
+    { name: "Ruangan 1", slug: "ruangan-1", minGuests: 4, maxGuests: 10, facilities: ["TV", "AC", "Wi-Fi", "Stopkontak"] },
+    { name: "Ruangan 2", slug: "ruangan-2", minGuests: 2, maxGuests: 6, facilities: ["AC", "Wi-Fi", "Stopkontak"] },
+    { name: "Ruangan 3", slug: "ruangan-3", minGuests: 10, maxGuests: 30, facilities: ["TV", "Mic", "AC", "Wi-Fi", "Stopkontak"] },
+    { name: "Ruangan 4", slug: "ruangan-4", minGuests: 4, maxGuests: 12, facilities: ["AC", "Wi-Fi", "Stopkontak"] },
+  ].map((r, i) => ({ ...r, photoUrl: `/ruangan/${i + 1}.jpeg`, sortOrder: i + 1 }));
 
   for (const r of rooms) {
     await db.room.upsert({
       where: { slug: r.slug },
-      update: r,
+      update: {},
       create: r,
     });
   }
@@ -97,7 +37,7 @@ export async function seed(db = prisma) {
   for (const c of categories) {
     const saved = await db.category.upsert({
       where: { name: c.name },
-      update: c,
+      update: {},
       create: c,
     });
     categoryMap.set(c.name, saved.id);
@@ -118,6 +58,8 @@ export async function seed(db = prisma) {
     const productName = parts[2].trim();
     const rawOptions = parts[3].trim();
     const basePrice = parseInt(parts[4].trim(), 10);
+    // Foto ilustrasi Unsplash (hotlink sesuai pedoman API); atribusi di docs/data/sumber-foto.csv
+    const photoUrl = parts[6]?.trim() || null;
 
     const categoryId = categoryMap.get(categoryName);
     if (!categoryId) {
@@ -131,29 +73,22 @@ export async function seed(db = prisma) {
       where: { categoryId, name: productName },
     });
 
-    if (existing) {
-      await db.product.update({
-        where: { id: existing.id },
-        data: {
-          basePrice,
-          options,
-          sortOrder,
-          isAvailable: true,
-          isArchived: false,
-        },
-      });
-    } else {
+    // Produk yang sudah ada tidak disentuh (harga/status admin tidak ter-reset), kecuali foto yang masih kosong
+    if (!existing) {
       await db.product.create({
         data: {
           categoryId,
           name: productName,
           basePrice,
           options,
+          photoUrl,
           sortOrder,
           isAvailable: true,
           isArchived: false,
         },
       });
+    } else if (!existing.photoUrl && photoUrl) {
+      await db.product.update({ where: { id: existing.id }, data: { photoUrl } });
     }
   }
 

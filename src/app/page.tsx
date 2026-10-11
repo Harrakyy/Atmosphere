@@ -5,10 +5,21 @@ import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { Stepper } from "@/components/Stepper";
 import { useBookingDraft } from "@/lib/booking-draft";
+import { formatDateIndo } from "@/lib/format";
+import { format, parse } from "date-fns";
+import { id as localeId } from "date-fns/locale";
+import { AlertTriangle, ArrowRight, CalendarDays, Clock, Coffee, Minus, Plus, QrCode, Tv } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
+// Tanggal kalender WIB (UTC+7), bukan zona waktu browser
 function toDateInputString(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  return new Date(date.getTime() + 7 * 3600_000).toISOString().slice(0, 10);
 }
 
 export default function HomePage() {
@@ -22,6 +33,7 @@ export default function HomePage() {
   const [end, setEnd] = useState("12:00");
   const [guests, setGuests] = useState(4);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   useEffect(() => {
     const now = new Date();
@@ -46,6 +58,7 @@ export default function HomePage() {
     }
   }, [isLoaded, draft.date, draft.start, draft.end, draft.guests]);
 
+  // shortcut: jam & durasi mengikuti default Setting, server tetap memvalidasi nilai asli (R-T); ambil dari API kalau admin sering mengubahnya
   // Jam operasional: 10:00 - 22:00 kelipatan 30 menit
   const timeSlots = [
     "10:00", "10:30", "11:00", "11:30",
@@ -78,8 +91,9 @@ export default function HomePage() {
       setErrorMsg("Durasi reservasi maksimal 4 jam (240 menit).");
       return;
     }
-    if (guests < 1 || guests > 30) {
-      setErrorMsg("Jumlah tamu harus antara 1 dan 30 orang.");
+    // Batas atas mengikuti kapasitas ruangan (dicek di langkah 2, R-A2)
+    if (guests < 1) {
+      setErrorMsg("Jumlah tamu minimal 1 orang.");
       return;
     }
 
@@ -94,174 +108,190 @@ export default function HomePage() {
     router.push("/reservasi/ruangan");
   };
 
+  // Kalender bekerja dengan Date lokal; string YYYY-MM-DD tetap jadi sumber kebenaran
+  const toLocalDate = (s: string) => (s ? parse(s, "yyyy-MM-dd", new Date()) : undefined);
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#F3F2EF]">
+    <div className="min-h-screen flex flex-col">
       <Header />
       <Stepper currentStep={1} />
 
       <main className="flex-1 max-w-4xl w-full mx-auto p-4 md:py-8 flex flex-col gap-6">
         {/* Hero Section */}
-        <div className="bg-white rounded-2xl p-6 md:p-8 border border-[#DFDDD6] shadow-xs text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-6">
+        <Card className="p-6 md:p-8 text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="max-w-xl">
-            <span className="inline-block px-3 py-1 bg-[#1C2955]/10 text-[#1C2955] text-xs font-semibold rounded-full mb-3">
+            <Badge variant="secondary" className="mb-3 bg-primary/10 text-primary">
               Ruang Privat Gratis Tanpa Biaya Sewa
-            </span>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-[#1C2955] tracking-tight mb-2">
+            </Badge>
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
               Reservasi Ruang Pertemuan & Acara Santai
             </h1>
-            <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+            <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
               Nikmati fasilitas ruang privat lengkap di Atmosphere Cafe cukup dengan pre-order menu minimal 1 makanan dan 1 minuman.
             </p>
           </div>
-          <div className="bg-[#F3F2EF] p-4 rounded-xl border border-[#DFDDD6] text-center w-full md:w-auto shrink-0">
-            <span className="block text-xs text-gray-500 font-medium">Jam Buka</span>
-            <span className="block text-lg font-bold text-[#1C2955]">10.00 – 22.00</span>
-            <span className="block text-[11px] text-[#D81B60] font-semibold mt-0.5">WIB (Setiap Hari)</span>
+          <div className="bg-muted p-4 rounded-xl border text-center w-full md:w-auto shrink-0">
+            <span className="flex items-center justify-center gap-1 text-xs text-muted-foreground font-medium">
+              <Clock className="size-3.5" /> Jam Buka
+            </span>
+            <span className="block text-lg font-bold">10.00 – 22.00</span>
+            <span className="block text-[11px] text-brand font-semibold mt-0.5">WIB (Setiap Hari)</span>
           </div>
-        </div>
+        </Card>
 
         {/* Step 1 Booking Form */}
-        <div className="bg-white rounded-2xl p-6 md:p-8 border border-[#DFDDD6] shadow-sm">
-          <div className="border-b border-[#DFDDD6] pb-4 mb-6">
-            <h2 className="text-lg font-bold text-[#1C2955]">1. Tentukan Jadwal & Jumlah Tamu</h2>
-            <p className="text-xs text-gray-500 mt-1">
+        <Card className="p-6 md:p-8">
+          <div className="border-b pb-4 mb-6">
+            <h2 className="text-lg font-bold">1. Tentukan Jadwal & Jumlah Tamu</h2>
+            <p className="text-xs text-muted-foreground mt-1">
               Pilih tanggal kedatangan, durasi penggunaan ruangan, dan jumlah peserta pertemuan.
             </p>
           </div>
 
           {errorMsg && (
-            <div className="mb-6 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm font-medium">
-              ⚠️ {errorMsg}
-            </div>
+            <Alert variant="destructive" className="mb-6">
+              <AlertTriangle />
+              <AlertDescription>{errorMsg}</AlertDescription>
+            </Alert>
           )}
 
           <form onSubmit={handleSearchRooms} className="flex flex-col gap-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {/* Tanggal */}
               <div>
-                <label htmlFor="booking-date" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                <Label htmlFor="booking-date" className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-700">
                   Tanggal Reservasi
-                </label>
-                <input
-                  id="booking-date"
-                  type="date"
-                  min={minDateStr}
-                  max={maxDateStr}
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#DFDDD6] focus:border-[#1C2955] focus:ring-2 focus:ring-[#1C2955]/15 outline-none font-medium text-sm text-[#1C2955] bg-white transition-all"
-                />
-                <span className="block text-[11px] text-gray-500 mt-1.5">
+                </Label>
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="booking-date"
+                      type="button"
+                      variant="outline"
+                      className="w-full h-11 justify-start rounded-xl font-medium"
+                    >
+                      <CalendarDays className="text-muted-foreground" />
+                      {date ? formatDateIndo(date) : "Pilih tanggal"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      locale={localeId}
+                      selected={toLocalDate(date)}
+                      defaultMonth={toLocalDate(date)}
+                      disabled={[
+                        ...(minDateStr ? [{ before: toLocalDate(minDateStr)! }] : []),
+                        ...(maxDateStr ? [{ after: toLocalDate(maxDateStr)! }] : []),
+                      ]}
+                      onSelect={(d) => {
+                        if (!d) return;
+                        setDate(format(d, "yyyy-MM-dd"));
+                        setCalendarOpen(false);
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <span className="block text-[11px] text-muted-foreground mt-1.5">
                   Batas pemesanan H-1 hingga 30 hari ke depan
                 </span>
               </div>
 
               {/* Jam Mulai & Selesai */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                  Jam Reservasi
-                </label>
+                <Label className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-700">Jam Reservasi</Label>
                 <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <select
-                      aria-label="Jam Mulai"
-                      value={start}
-                      onChange={(e) => setStart(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-[#DFDDD6] focus:border-[#1C2955] outline-none text-sm text-[#1C2955] font-medium bg-white"
-                    >
-                      {timeSlots.slice(0, -1).map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="block text-[10px] text-gray-400 mt-1 text-center">Mulai</span>
-                  </div>
-                  <div>
-                    <select
-                      aria-label="Jam Selesai"
-                      value={end}
-                      onChange={(e) => setEnd(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-[#DFDDD6] focus:border-[#1C2955] outline-none text-sm text-[#1C2955] font-medium bg-white"
-                    >
-                      {timeSlots.slice(1).map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="block text-[10px] text-gray-400 mt-1 text-center">Selesai</span>
-                  </div>
+                  {[
+                    { label: "Mulai", value: start, onChange: setStart, slots: timeSlots.slice(0, -1) },
+                    { label: "Selesai", value: end, onChange: setEnd, slots: timeSlots.slice(1) },
+                  ].map((field) => (
+                    <div key={field.label}>
+                      <select
+                        aria-label={`Jam ${field.label}`}
+                        value={field.value}
+                        onChange={(e) => field.onChange(e.target.value)}
+                        className="w-full h-11 px-3 rounded-xl border border-input bg-white text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                      >
+                        {field.slots.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="block text-[10px] text-muted-foreground mt-1 text-center">{field.label}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
               {/* Jumlah Tamu */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                  Jumlah Tamu
-                </label>
-                <div className="flex items-center gap-3 border border-[#DFDDD6] rounded-xl p-1 bg-white">
-                  <button
+                <Label className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-700">Jumlah Tamu</Label>
+                <div className="flex items-center gap-3 border rounded-xl p-1 bg-white">
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="icon-lg"
+                    aria-label="Kurangi tamu"
                     onClick={() => setGuests((g) => Math.max(1, g - 1))}
-                    className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg bg-[#F3F2EF] text-[#1C2955] hover:bg-gray-200 active:scale-95 transition-all"
                   >
-                    -
-                  </button>
+                    <Minus />
+                  </Button>
                   <div className="flex-1 text-center">
-                    <span className="text-base font-bold text-[#1C2955]">{guests}</span>
-                    <span className="text-xs text-gray-500 ml-1">orang</span>
+                    <span className="text-base font-bold">{guests}</span>
+                    <span className="text-xs text-muted-foreground ml-1">orang</span>
                   </div>
-                  <button
+                  <Button
                     type="button"
-                    onClick={() => setGuests((g) => Math.min(30, g + 1))}
-                    className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg bg-[#F3F2EF] text-[#1C2955] hover:bg-gray-200 active:scale-95 transition-all"
+                    variant="secondary"
+                    size="icon-lg"
+                    aria-label="Tambah tamu"
+                    onClick={() => setGuests((g) => g + 1)}
                   >
-                    +
-                  </button>
+                    <Plus />
+                  </Button>
                 </div>
-                <span className="block text-[11px] text-gray-500 mt-1.5">
-                  Kapasitas ruangan 2 hingga 20 orang
+                <span className="block text-[11px] text-muted-foreground mt-1.5">
+                  Ruangan yang tampil menyesuaikan jumlah tamu
                 </span>
               </div>
             </div>
 
             {/* Submit Button */}
-            <div className="pt-4 border-t border-[#DFDDD6] flex items-center justify-end">
-              <button
-                type="submit"
-                className="w-full md:w-auto px-8 py-3 bg-[#1C2955] hover:bg-[#1A2751] text-white font-bold text-sm rounded-xl shadow-sm hover:shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
-              >
-                Cari Ruangan Tersedia →
-              </button>
+            <div className="pt-4 border-t flex items-center justify-end">
+              <Button type="submit" size="xl" className="w-full md:w-auto">
+                Cari Ruangan Tersedia
+                <ArrowRight />
+              </Button>
             </div>
           </form>
-        </div>
+        </Card>
 
         {/* Feature Highlights */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-[#DFDDD6] shadow-xs">
-            <span className="text-xl mb-2 block">☕</span>
-            <h3 className="font-bold text-sm text-[#1C2955] mb-1">Pre-Order Transparan</h3>
-            <p className="text-xs text-gray-600 leading-relaxed">
-              Pilih menu makanan dan minuman favorit Anda langsung dari web tanpa biaya ruangan per jam.
-            </p>
-          </div>
-          <div className="bg-white p-5 rounded-2xl border border-[#DFDDD6] shadow-xs">
-            <span className="text-xl mb-2 block">📺</span>
-            <h3 className="font-bold text-sm text-[#1C2955] mb-1">Fasilitas Nyaman</h3>
-            <p className="text-xs text-gray-600 leading-relaxed">
-              Dilengkapi AC, Smart TV / Proyektor, stopkontak per meja, dan koneksi internet cepat.
-            </p>
-          </div>
-          <div className="bg-white p-5 rounded-2xl border border-[#DFDDD6] shadow-xs">
-            <span className="text-xl mb-2 block">📱</span>
-            <h3 className="font-bold text-sm text-[#1C2955] mb-1">E-Tiket & QR Check-in</h3>
-            <p className="text-xs text-gray-600 leading-relaxed">
-              Dapatkan e-tiket instan dengan kode QR yang bisa disimpan langsung ke chat WhatsApp Anda.
-            </p>
-          </div>
+          {[
+            {
+              icon: Coffee,
+              title: "Pre-Order Transparan",
+              text: "Pilih menu makanan dan minuman favorit Anda langsung dari web tanpa biaya ruangan per jam.",
+            },
+            {
+              icon: Tv,
+              title: "Fasilitas Nyaman",
+              text: "Dilengkapi AC, Smart TV / Proyektor, stopkontak per meja, dan koneksi internet cepat.",
+            },
+            {
+              icon: QrCode,
+              title: "E-Tiket & Kode Booking",
+              text: "Dapatkan e-tiket instan dengan kode 4 karakter yang bisa diunduh sebagai gambar dan disimpan ke WhatsApp Anda.",
+            },
+          ].map((f) => (
+            <Card key={f.title} className="p-5 gap-0">
+              <f.icon className="size-5 text-brand mb-2" />
+              <h3 className="font-bold text-sm mb-1">{f.title}</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">{f.text}</p>
+            </Card>
+          ))}
         </div>
       </main>
     </div>

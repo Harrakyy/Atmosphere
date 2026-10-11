@@ -12,7 +12,7 @@ const envSchema = z.object({
     .string()
     .default("false")
     .transform((val) => val === "true"),
-  PAYMENT_GATEWAY: z.enum(["midtrans", "fake"]).default("fake"),
+  PAYMENT_GATEWAY: z.enum(["midtrans", "fake"]).default("midtrans"),
   BLOB_READ_WRITE_TOKEN: z.string().optional(),
   ADMIN_SEED_EMAIL: z.string().email().optional(),
   ADMIN_SEED_PASSWORD: z.string().min(8).optional(),

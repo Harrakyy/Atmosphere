@@ -3,6 +3,52 @@
 import { useEffect, useState, use, useCallback } from "react";
 import Link from "next/link";
 import { formatRupiah, formatDateIndo, formatTimeRange, getStatusInfo } from "@/lib/format";
+import { toast } from "sonner";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CalendarClock,
+  CheckCheck,
+  Loader2,
+  LogIn,
+  MessageCircle,
+  UserX,
+  Wallet,
+  XCircle,
+} from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+
+interface PendingAction {
+  endpoint: "check-in" | "no-show" | "complete";
+  title: string;
+  successMsg: string;
+}
 
 interface DetailItem {
   id: string;
@@ -71,6 +117,7 @@ export default function AdminReservasiDetailPage({
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
   // Dialog Modals state
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -117,8 +164,8 @@ export default function AdminReservasiDetailPage({
       .catch(() => {});
   }, [fetchDetail]);
 
-  const handleSimpleAction = async (endpoint: string, successMsg?: string) => {
-    if (!confirm("Apakah Anda yakin ingin melanjutkan tindakan ini?")) return;
+  const runSimpleAction = async ({ endpoint, successMsg }: PendingAction) => {
+    setPendingAction(null);
     setActionLoading(true);
     setErrorMsg(null);
     try {
@@ -129,10 +176,12 @@ export default function AdminReservasiDetailPage({
       if (!res.ok || !json.success) {
         throw new Error(json.error?.message || "Gagal memproses tindakan.");
       }
-      if (successMsg) alert(successMsg);
+      toast.success(successMsg);
       await fetchDetail();
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Terjadi kesalahan.");
+      const message = err instanceof Error ? err.message : "Terjadi kesalahan.";
+      setErrorMsg(message);
+      toast.error(message);
     } finally {
       setActionLoading(false);
     }
@@ -157,6 +206,7 @@ export default function AdminReservasiDetailPage({
         throw new Error(json.error?.message || "Gagal membatalkan reservasi.");
       }
       setShowCancelModal(false);
+      toast.success("Reservasi dibatalkan. Kirim WA pembatalan ke tamu.");
       await fetchDetail();
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Gagal membatalkan reservasi.");
@@ -180,6 +230,7 @@ export default function AdminReservasiDetailPage({
         throw new Error(json.error?.message || "Gagal menyelesaikan refund.");
       }
       setShowRefundDoneModal(false);
+      toast.success("Refund ditandai selesai.");
       await fetchDetail();
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Terjadi kesalahan.");
@@ -208,6 +259,7 @@ export default function AdminReservasiDetailPage({
         throw new Error(json.error?.message || "Gagal mengubah jadwal reservasi.");
       }
       setShowRescheduleModal(false);
+      toast.success("Jadwal reservasi diperbarui.");
       await fetchDetail();
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Gagal mengubah jadwal.");
@@ -218,21 +270,30 @@ export default function AdminReservasiDetailPage({
 
   if (loading) {
     return (
-      <div className="py-20 text-center">
-        <div className="inline-block w-8 h-8 border-3 border-[#1C2955]/20 border-t-[#1C2955] rounded-full animate-spin mb-3" />
-        <p className="text-xs text-gray-500 font-medium">Memuat rincian reservasi...</p>
+      <div className="flex flex-col gap-6" aria-label="Memuat rincian reservasi">
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-32 w-full rounded-3xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Skeleton className="h-64 lg:col-span-2 rounded-3xl" />
+          <Skeleton className="h-64 rounded-3xl" />
+        </div>
       </div>
     );
   }
 
   if (!detail) {
     return (
-      <div className="bg-white p-8 rounded-2xl border border-rose-200 text-center">
-        <p className="text-sm font-bold text-rose-700">⚠️ {errorMsg || "Reservasi tidak ditemukan."}</p>
-        <Link href="/admin" className="mt-3 inline-block text-xs font-semibold text-[#1C2955] underline">
-          ← Kembali ke Daftar
-        </Link>
-      </div>
+      <Alert variant="destructive" className="bg-white">
+        <AlertTriangle />
+        <AlertDescription>
+          {errorMsg || "Reservasi tidak ditemukan."}
+          <Button asChild variant="outline" size="sm" className="mt-2">
+            <Link href="/admin">
+              <ArrowLeft /> Kembali ke Daftar
+            </Link>
+          </Button>
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -242,19 +303,20 @@ export default function AdminReservasiDetailPage({
     <div className="flex flex-col gap-6">
       {/* Breadcrumb & Navigation */}
       <div className="flex items-center justify-between">
-        <Link href="/admin" className="text-xs font-bold text-[#1C2955] hover:underline">
-          ← Kembali ke Daftar Reservasi
-        </Link>
+        <Button asChild variant="ghost" size="sm" className="-ml-2">
+          <Link href="/admin">
+            <ArrowLeft /> Kembali ke Daftar Reservasi
+          </Link>
+        </Button>
 
-        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${s.bg} ${s.text}`}>
-          {s.label}
-        </span>
+        <Badge className={`px-3 py-1 h-auto uppercase ${s.bg} ${s.text}`}>{s.label}</Badge>
       </div>
 
       {errorMsg && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl">
-          ⚠️ {errorMsg}
-        </div>
+        <Alert variant="destructive" className="bg-white">
+          <AlertTriangle />
+          <AlertDescription>{errorMsg}</AlertDescription>
+        </Alert>
       )}
 
       {/* Main Header Card */}
@@ -273,72 +335,79 @@ export default function AdminReservasiDetailPage({
         <div className="flex flex-wrap items-center gap-2">
           {detail.status === "CONFIRMED" && (
             <>
-              <button
+              <Button
                 type="button"
+                size="lg"
+                className="bg-emerald-600 hover:bg-emerald-700"
                 disabled={actionLoading}
-                onClick={() => handleSimpleAction("check-in", "Tamu berhasil di-check-in!")}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs"
+                onClick={() =>
+                  setPendingAction({ endpoint: "check-in", title: "Check-in tamu ini?", successMsg: "Tamu berhasil di-check-in!" })
+                }
               >
-                ✓ Check-In
-              </button>
-              <button
+                <LogIn /> Check-In
+              </Button>
+              <Button type="button" size="lg" disabled={actionLoading} onClick={() => setShowRescheduleModal(true)}>
+                <CalendarClock /> Ubah Jadwal
+              </Button>
+              <Button
                 type="button"
+                size="lg"
+                variant="secondary"
+                className="bg-purple-100 text-purple-800 hover:bg-purple-200"
                 disabled={actionLoading}
-                onClick={() => setShowRescheduleModal(true)}
-                className="px-4 py-2 bg-[#1C2955] hover:bg-[#1A2751] text-white font-bold text-xs rounded-xl shadow-xs"
+                onClick={() =>
+                  setPendingAction({
+                    endpoint: "no-show",
+                    title: "Tandai tamu tidak hadir (No-Show)?",
+                    successMsg: "Reservasi ditandai No-Show.",
+                  })
+                }
               >
-                🔄 Ubah Jadwal
-              </button>
-              <button
+                <UserX /> Tandai No-Show
+              </Button>
+              <Button
                 type="button"
-                disabled={actionLoading}
-                onClick={() => handleSimpleAction("no-show", "Reservasi ditandai No-Show.")}
-                className="px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold text-xs rounded-xl"
-              >
-                Tandai No-Show
-              </button>
-              <button
-                type="button"
+                size="lg"
+                variant="destructive"
                 disabled={actionLoading}
                 onClick={() => setShowCancelModal(true)}
-                className="px-3 py-2 bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold text-xs rounded-xl"
               >
-                Batalkan
-              </button>
+                <XCircle /> Batalkan
+              </Button>
             </>
           )}
 
           {detail.status === "CHECKED_IN" && (
-            <button
+            <Button
               type="button"
+              size="lg"
               disabled={actionLoading}
-              onClick={() => handleSimpleAction("complete", "Reservasi selesai.")}
-              className="px-5 py-2.5 bg-[#1C2955] hover:bg-[#1A2751] text-white font-bold text-xs rounded-xl shadow-xs"
+              onClick={() =>
+                setPendingAction({ endpoint: "complete", title: "Tandai reservasi selesai?", successMsg: "Reservasi selesai." })
+              }
             >
-              ✓ Tandai Selesai
-            </button>
+              <CheckCheck /> Tandai Selesai
+            </Button>
           )}
 
           {detail.status === "CANCELLED" && detail.refundStatus === "PENDING" && (
-            <button
+            <Button
               type="button"
+              size="lg"
+              className="bg-amber-600 hover:bg-amber-700"
               disabled={actionLoading}
               onClick={() => setShowRefundDoneModal(true)}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs"
             >
-              💰 Tandai Refund Selesai
-            </button>
+              <Wallet /> Tandai Refund Selesai
+            </Button>
           )}
 
           {detail.wa.cancelLink && (
-            <a
-              href={detail.wa.cancelLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1"
-            >
-              💬 Kirim WA Pembatalan
-            </a>
+            <Button asChild size="lg" className="bg-emerald-600 hover:bg-emerald-700">
+              <a href={detail.wa.cancelLink} target="_blank" rel="noopener noreferrer">
+                <MessageCircle /> Kirim WA Pembatalan
+              </a>
+            </Button>
           )}
         </div>
       </div>
@@ -481,214 +550,218 @@ export default function AdminReservasiDetailPage({
         </div>
       </div>
 
+      {/* KONFIRMASI: Check-in / No-show / Selesai */}
+      <AlertDialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{pendingAction?.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Reservasi {detail.code} atas nama {detail.customerName}. Tindakan ini tercatat di log aktivitas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => pendingAction && runSimpleAction(pendingAction)}>
+              Ya, Lanjutkan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* MODAL: Batalkan Reservasi */}
-      {showCancelModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-lg border border-[#DFDDD6]">
-            <h3 className="text-base font-bold text-[#1C2955] mb-2">
-              Batalkan Reservasi {detail.code}
-            </h3>
-            <form onSubmit={handleConfirmCancel} className="flex flex-col gap-4 text-xs">
-              <div>
-                <label className="font-bold text-gray-600 block mb-1">Inisiator Pembatalan</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCancelBy("CAFE");
-                      setCancelRefundAmount(detail.totalAmount);
-                    }}
-                    className={`p-2 rounded-xl border text-center font-bold ${
-                      cancelBy === "CAFE" ? "bg-[#1C2955] text-white border-[#1C2955]" : "bg-gray-50 text-gray-700"
-                    }`}
-                  >
-                    Dari Cafe (Refund 100%)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCancelBy("CUSTOMER")}
-                    className={`p-2 rounded-xl border text-center font-bold ${
-                      cancelBy === "CUSTOMER" ? "bg-[#1C2955] text-white border-[#1C2955]" : "bg-gray-50 text-gray-700"
-                    }`}
-                  >
-                    Permintaan Customer
-                  </button>
-                </div>
+      <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Batalkan Reservasi {detail.code}</DialogTitle>
+            <DialogDescription>Customer akan dihubungi lewat template WA setelah pembatalan.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleConfirmCancel} className="flex flex-col gap-4 text-xs">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-bold text-gray-600">Inisiator Pembatalan</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={cancelBy === "CAFE" ? "default" : "outline"}
+                  className="h-auto py-2 whitespace-normal"
+                  onClick={() => {
+                    setCancelBy("CAFE");
+                    setCancelRefundAmount(detail.totalAmount);
+                  }}
+                >
+                  Dari Cafe (Refund 100%)
+                </Button>
+                <Button
+                  type="button"
+                  variant={cancelBy === "CUSTOMER" ? "default" : "outline"}
+                  className="h-auto py-2 whitespace-normal"
+                  onClick={() => setCancelBy("CUSTOMER")}
+                >
+                  Permintaan Customer
+                </Button>
               </div>
+            </div>
 
-              {cancelBy === "CUSTOMER" && (
-                <div>
-                  <label htmlFor="cancel-refund-amount" className="font-bold text-gray-600 block mb-1">
-                    Nominal Refund (Rp 0 s/d {formatRupiah(detail.totalAmount)})
-                  </label>
-                  <input
-                    id="cancel-refund-amount"
-                    type="number"
-                    min={0}
-                    max={detail.totalAmount}
-                    required
-                    value={cancelRefundAmount}
-                    onChange={(e) => setCancelRefundAmount(Number(e.target.value))}
-                    className="w-full p-2.5 rounded-xl border border-[#DFDDD6] outline-none text-xs text-[#1C2955]"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="cancel-reason" className="font-bold text-gray-600 block mb-1">Alasan Pembatalan</label>
-                <textarea
-                  id="cancel-reason"
-                  rows={2}
+            {cancelBy === "CUSTOMER" && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="cancel-refund-amount" className="text-xs font-bold text-gray-600">
+                  Nominal Refund (Rp 0 s/d {formatRupiah(detail.totalAmount)})
+                </Label>
+                <Input
+                  id="cancel-refund-amount"
+                  type="number"
+                  min={0}
+                  max={detail.totalAmount}
                   required
-                  placeholder="Contoh: Renovasi ruangan mendadak, permintaan customer..."
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-[#DFDDD6] outline-none text-xs text-[#1C2955]"
+                  value={cancelRefundAmount}
+                  onChange={(e) => setCancelRefundAmount(Number(e.target.value))}
                 />
               </div>
+            )}
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                <button
-                  type="button"
-                  onClick={() => setShowCancelModal(false)}
-                  className="px-4 py-2 rounded-xl text-gray-600 font-bold"
-                >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="cancel-reason" className="text-xs font-bold text-gray-600">
+                Alasan Pembatalan
+              </Label>
+              <Textarea
+                id="cancel-reason"
+                rows={2}
+                required
+                placeholder="Contoh: Renovasi ruangan mendadak, permintaan customer..."
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+              />
+            </div>
+
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="ghost">
                   Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  className="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl"
-                >
-                  Konfirmasi Pembatalan
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                </Button>
+              </DialogClose>
+              <Button type="submit" variant="destructive" disabled={actionLoading}>
+                {actionLoading && <Loader2 className="animate-spin" />}
+                Konfirmasi Pembatalan
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* MODAL: Selesaikan Refund */}
-      {showRefundDoneModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-lg border border-[#DFDDD6]">
-            <h3 className="text-base font-bold text-[#1C2955] mb-2">
-              Tandai Refund Selesai Ditransfer
-            </h3>
-            <form onSubmit={handleConfirmRefundDone} className="flex flex-col gap-4 text-xs">
-              <div>
-                <label htmlFor="refund-transfer-note" className="font-bold text-gray-600 block mb-1">
-                  Catatan Transfer Rekening
-                </label>
-                <textarea
-                  id="refund-transfer-note"
-                  rows={3}
-                  placeholder="Contoh: Ditransfer via BCA 1234567890 an Budi Santoso tgl 12 Okt"
-                  value={refundNote}
-                  onChange={(e) => setRefundNote(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-[#DFDDD6] outline-none text-xs text-[#1C2955]"
-                />
-              </div>
-              <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                <button
-                  type="button"
-                  onClick={() => setShowRefundDoneModal(false)}
-                  className="px-4 py-2 rounded-xl text-gray-600 font-bold"
-                >
+      <Dialog open={showRefundDoneModal} onOpenChange={setShowRefundDoneModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Tandai Refund Selesai Ditransfer</DialogTitle>
+            <DialogDescription>Nominal refund: {formatRupiah(detail.refundAmount)}</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleConfirmRefundDone} className="flex flex-col gap-4 text-xs">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="refund-transfer-note" className="text-xs font-bold text-gray-600">
+                Catatan Transfer Rekening
+              </Label>
+              <Textarea
+                id="refund-transfer-note"
+                rows={3}
+                placeholder="Contoh: Ditransfer via BCA 1234567890 an Budi Santoso tgl 12 Okt"
+                value={refundNote}
+                onChange={(e) => setRefundNote(e.target.value)}
+              />
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="ghost">
                   Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl"
-                >
-                  Simpan Refund Selesai
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                </Button>
+              </DialogClose>
+              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={actionLoading}>
+                {actionLoading && <Loader2 className="animate-spin" />}
+                Simpan Refund Selesai
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* MODAL: Ubah Jadwal (Reschedule) */}
-      {showRescheduleModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-lg border border-[#DFDDD6]">
-            <h3 className="text-base font-bold text-[#1C2955] mb-2">
-              Ubah Jadwal Reservasi
-            </h3>
-            <form onSubmit={handleConfirmReschedule} className="flex flex-col gap-4 text-xs">
-              <div>
-                <label htmlFor="reschedule-room-select" className="font-bold text-gray-600 block mb-1">Pilih Ruangan</label>
-                <select
-                  id="reschedule-room-select"
-                  value={reschedRoomId}
-                  onChange={(e) => setReschedRoomId(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-[#DFDDD6] text-xs font-semibold"
-                >
+      <Dialog open={showRescheduleModal} onOpenChange={setShowRescheduleModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ubah Jadwal Reservasi</DialogTitle>
+            <DialogDescription>Batas pemesanan H-1 tidak berlaku untuk reschedule oleh admin.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleConfirmReschedule} className="flex flex-col gap-4 text-xs">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="reschedule-room-select" className="text-xs font-bold text-gray-600">
+                Pilih Ruangan
+              </Label>
+              <Select value={reschedRoomId} onValueChange={setReschedRoomId}>
+                <SelectTrigger id="reschedule-room-select" className="w-full">
+                  <SelectValue placeholder="Pilih ruangan" />
+                </SelectTrigger>
+                <SelectContent>
                   {roomsList.map((r) => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
                   ))}
-                </select>
-              </div>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div>
-                <label htmlFor="reschedule-date" className="font-bold text-gray-600 block mb-1">Tanggal Baru</label>
-                <input
-                  id="reschedule-date"
-                  type="date"
-                  required
-                  value={reschedDate}
-                  onChange={(e) => setReschedDate(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-[#DFDDD6] text-xs"
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="reschedule-date" className="text-xs font-bold text-gray-600">
+                Tanggal Baru
+              </Label>
+              <Input
+                id="reschedule-date"
+                type="date"
+                required
+                value={reschedDate}
+                onChange={(e) => setReschedDate(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="reschedule-start-time" className="text-xs font-bold text-gray-600">
+                  Jam Mulai
+                </Label>
+                <Input
+                  id="reschedule-start-time"
+                  type="time"
+                  step={1800}
+                  value={reschedStart}
+                  onChange={(e) => setReschedStart(e.target.value)}
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label htmlFor="reschedule-start-time" className="font-bold text-gray-600 block mb-1">Jam Mulai</label>
-                  <input
-                    id="reschedule-start-time"
-                    type="time"
-                    step={1800}
-                    value={reschedStart}
-                    onChange={(e) => setReschedStart(e.target.value)}
-                    className="w-full p-2 rounded-xl border border-[#DFDDD6] text-xs"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="reschedule-end-time" className="font-bold text-gray-600 block mb-1">Jam Selesai</label>
-                  <input
-                    id="reschedule-end-time"
-                    type="time"
-                    step={1800}
-                    value={reschedEnd}
-                    onChange={(e) => setReschedEnd(e.target.value)}
-                    className="w-full p-2 rounded-xl border border-[#DFDDD6] text-xs"
-                  />
-                </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="reschedule-end-time" className="text-xs font-bold text-gray-600">
+                  Jam Selesai
+                </Label>
+                <Input
+                  id="reschedule-end-time"
+                  type="time"
+                  step={1800}
+                  value={reschedEnd}
+                  onChange={(e) => setReschedEnd(e.target.value)}
+                />
               </div>
+            </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                <button
-                  type="button"
-                  onClick={() => setShowRescheduleModal(false)}
-                  className="px-4 py-2 rounded-xl text-gray-600 font-bold"
-                >
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="ghost">
                   Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  className="px-4 py-2 bg-[#1C2955] text-white font-bold rounded-xl"
-                >
-                  Simpan Jadwal Baru
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                </Button>
+              </DialogClose>
+              <Button type="submit" disabled={actionLoading}>
+                {actionLoading && <Loader2 className="animate-spin" />}
+                Simpan Jadwal Baru
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

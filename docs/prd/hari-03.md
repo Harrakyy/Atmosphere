@@ -13,7 +13,7 @@
 | Pilih Ruangan | Kartu ruangan memakai data API. Ruangan yang tidak tersedia ditampilkan **abu-abu dengan alasannya** ("Sudah dipesan", "Kapasitas maks. 6", "Sedang maintenance"). Hapus harga per jam | K-01, R-A5 |
 | Pilih Menu | Hapus "Sewa Ruangan Rp300.000" dari keranjang. Tambahkan **pemilih Pilihan** (chip Hot/Ice/saos/rasa) di kartu produk. Tampilkan indikator **"✓ 1 makanan ✓ 1 minuman"**, dan tombol lanjut nonaktif sampai syarat terpenuhi. Pertahankan pilihan `waktu_penyajian` + catatan dapur | K-01, K-13 |
 | Bayar | Tab QRIS/VA/Kartu buatan sendiri **dihapus**. Isinya: form data pemesan + ringkasan + tombol **Bayar** (`window.snap.pay(token)`) + timer dari `holdExpiresAt` | K-07, K-16 |
-| E-Tiket | QR "LUMA/NMID" diganti **QR check-in** (`checkInUrl`). Tambahkan tombol **Simpan ke WhatsApp**, **Hubungi Cafe**, **Unduh QR**. Kalau status masih `PENDING_PAYMENT`, tampilkan "Menunggu konfirmasi pembayaran…" dan cek status ulang setiap 3 detik (maksimal 2 menit) | K-06, K-27, K-30 |
+| E-Tiket | QR "LUMA/NMID" diganti **QR check-in** (`checkInUrl`). Tambahkan tombol **Simpan ke WhatsApp**, **Hubungi Cafe**, **Unduh QR**. Kalau status masih `PENDING_PAYMENT`, tampilkan "Menunggu konfirmasi pembayaran…" dan cek status ulang setiap 3 detik (maksimal 2 menit) | K-06, K-27, K-30 | **(Direvisi: tanpa QR, lihat K-27 revisi.)**
 | Login | Hapus "UTech". Ubah "Phone or Email" menjadi **Email** | K-11 |
 | Kartu menu admin | Pakai desain grid menu yang sudah ada + tombol "Tambah Menu" | — |
 | Semua layar | Hapus data contoh: "Room 14", "Stepana Bandery Ave", "LumaDesk x Konteks", "MG Software", tanggal 2024 | — |
@@ -29,7 +29,7 @@
 - [x] `/reservasi/checkout`: data pemesan dengan validasi Zod yang sama (`src/contracts`) → `POST /api/reservations` → `snap.pay()`.
   - Callback `onSuccess`/`onPending` → arahkan ke `/tiket/[token]`. `onClose` → tetap di halaman dan tampilkan tombol "Bayar lagi" (pakai token yang sama selama belum kedaluwarsa).
   - Error 409 → tampilkan "Slot baru saja diambil orang lain" dan arahkan kembali ke langkah 2.
-- [x] `/tiket/[token]`: status, QR (library `qrcode`), detail, tombol WA, unduh QR (PNG).
+- [x] `/tiket/[token]`: status, QR (library `qrcode`), detail, tombol WA, unduh QR (PNG). **(Direvisi 11 Okt: QR diganti kode booking 4 karakter + tombol Unduh Kode, lihat K-27 revisi.)**
 - [x] Muat script Snap hanya di halaman checkout dan tiket (`next/script`, dengan `data-client-key` dari `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY`).
 
 ## P0 — Admin Inti (±2 jam)
@@ -51,13 +51,13 @@
 - [ ] Isi env lainnya di Vercel (§10 overview). `APP_URL` dan `BETTER_AUTH_URL` diisi domain Vercel.
 - [ ] Build command: `prisma migrate deploy && next build`. Seed dijalankan sekali dari lokal ke database Neon.
 - [ ] Dashboard Midtrans sandbox: ubah Notification URL ke `https://<domain>/api/payments/midtrans/notification`.
-- [ ] **Smoke test di produksi:** booking → bayar di simulator → tiket `CONFIRMED` → scan QR pakai HP → check-in → reservasi muncul di rekap dapur.
+- [ ] **Smoke test di produksi:** booking → bayar di simulator → tiket `CONFIRMED` → ketik kode 4 karakter di dashboard admin → check-in → reservasi muncul di rekap dapur.
 
 ## P2 — Kalau Masih Ada Waktu
 - [x] `/cek-reservasi`
 - [x] `/admin/pengaturan`
 - [x] Dialog **Ubah Jadwal** di detail reservasi
-- [x] Langkah 1: tampilkan blok jam yang terisi (`/api/availability/day`) setelah ruangan diketahui
+- [x] Tampilkan blok jam yang terisi (`/api/availability/day`) setelah ruangan diketahui (ditampilkan di kartu ruangan langkah 2, karena ruangan baru diketahui di sana)
 - [x] 1 tes otomatis untuk happy path customer dan admin lifecycle (`tests/integration/day3-e2e.test.ts`)
 
 ## ✅ Definition of Done Hari 3 (= MVP)

@@ -1,81 +1,81 @@
-kategori,jenis,nama,pilihan,harga_kasir,catatan_perapian
-Makanan,FOOD,Pasta Aglio Olio,,27000,
-Makanan,FOOD,Pasta Bolognese,,27000,
-Makanan,FOOD,Pasta Carbonara,,27000,
-Makanan,FOOD,Rice Bowl Beef Teriyaki,,27000,
-Makanan,FOOD,Rice Bowl Chicken Sambel Matah,,20000,
-Makanan,FOOD,Rice Bowl Saikoro Garlic Butter,,27000,
-Makanan,FOOD,Rice Bowl Beef Bulgogi,,27000,
-Makanan,FOOD,Rice Bowl Chicken Nanban,,25000,
-Makanan,FOOD,Rice Bowl Chicken Garlic Butter,,22000,
-Makanan,FOOD,Rice Bowl Ayam Geprek,,22000,
-Makanan,FOOD,Beef Hamburg Steak,Saos Mushroom|Saos Blackpepper|Saos Barbeque,35000,pilihan saos dipindah dari kolom keterangan
-Makanan,FOOD,Chicken Crispy Steak,Saos Mushroom|Saos Blackpepper|Saos Barbeque,25000,pilihan saos dipindah dari kolom keterangan
-Makanan,FOOD,Mac & Cheese,,27000,
-Makanan,FOOD,Bakso Campur,,19000,
-Makanan,FOOD,Nasi Ayam Kremes,,17000,
-Makanan,FOOD,Nasi Ayam Bakar,,17000,
-Makanan,FOOD,Nasi Ayam Kalasan,,19000,
-Makanan,FOOD,Nasi Soto Ayam,,15000,
-Makanan,FOOD,Nasi Lele Goreng,,18000,
-Makanan,FOOD,Nasi Lele Bakar,,20000,
-Makanan,FOOD,Nasi Nila Goreng,,23000,
-Makanan,FOOD,Nasi Nila Bakar,,25000,
-Makanan,FOOD,Nasi Goreng Jawa,,17000,
-Makanan,FOOD,Mie Goreng Jawa,,17000,
-Makanan,FOOD,Nasi Goreng Magelangan,,19000,
-Makanan,FOOD,Mie Ayam Chili Oil,,25000,
-Makanan,FOOD,Mie Ayam Katsu,,25000,
-Makanan,FOOD,Indomie Ori,Kuah|Goreng,9000,asal: Indomie Kuah/Goreng ORI
-Makanan,FOOD,Indomie Telor,Kuah|Goreng,12000,asal: Indomie Kuah/Goreng Telor
-Snack,FOOD,Mendoan,,10000,
-Snack,FOOD,Roti Bakar (Coklat / Keju),Coklat|Keju,10000,asal: Roti Bakar Coklat/Keju - nama perlu konfirmasi mitra
-Snack,FOOD,Roti Bakar (Coklat Keju / Nutella / Skippy),Coklat Keju|Nutella|Skippy,15000,asal: Roti Bakar Coklat Keju/Nutela/Skippy - typo Nutela diperbaiki
-Snack,FOOD,Pisang Bakar (Coklat / Keju),Coklat|Keju,12000,asal: Pisang Bakar Coklat/Keju
-Snack,FOOD,Pisang Bakar Coklat Keju,,15000,produk berbeda dari baris sebelumnya (isi coklat + keju)
-Snack,FOOD,Pisang Goreng Karamel,,15000,
-Snack,FOOD,Pisang Goreng Keju,,15000,
-Snack,FOOD,French Fries,,15000,
-Snack,FOOD,Snack Platter,,20000,typo Plater diperbaiki
-Snack,FOOD,Cheese Bite,,17000,
-Snack,FOOD,Cireng,,10000,
-Snack,FOOD,Mac Nugget,,17000,
-Snack,FOOD,Singkong Ori,,15000,
-Snack,FOOD,Singkong Keju,,18000,
-Snack,FOOD,Singkong Spicy,,18000,
-Snack,FOOD,Tahu Aci Mini,,15000,
-Snack,FOOD,Dimsum Rendang,,18000,
-Snack,FOOD,Sosis Roll,,18000,
-Minuman,DRINK,Jeruk,Hot|Ice,15000,asal: Jeruk Hot/Ice
-Minuman,DRINK,Chocolate,Hot|Ice,20000,asal: Chocolate Hot/Ice
-Minuman,DRINK,Matcha Latte,Hot|Ice,20000,asal: Matcha Latte Hot/Ice
-Minuman,DRINK,Taro Latte,Hot|Ice,20000,asal: Taro Latte Hot/Ice
-Minuman,DRINK,Mango Yakult,,20000,
-Minuman,DRINK,Leci Yakult,,20000,
-Minuman,DRINK,Melon Yakult,,20000,
-Minuman,DRINK,Korean Strawberry Milk,,25000,
-Minuman,DRINK,Choco Matcha Ice,,23000,hanya Ice - tidak perlu pilihan
-Minuman,DRINK,Air Mineral,,5000,
-Minuman,DRINK,Teh Tawar,Hot|Ice,5000,asal: Teh Tawar Ice/Hot
-Minuman,DRINK,Teh Manis,Hot|Ice,8000,asal: Teh Manis Hot/Ice
-Minuman,DRINK,Lemon Tea,Hot|Ice,17000,asal: Lemon Tea Hot/Ice
-Minuman,DRINK,Teh Telang,Hot|Ice,15000,asal: Teh Telang Hot/Ice
-Minuman,DRINK,Kopi Tubruk,Hot|Ice,12000,asal: Kopi Tubruk Hot/Ice
-Minuman,DRINK,Kopi Tubruk Susu,Hot|Ice,15000,asal: Kopi Tubruk Susu Hot/Ice
-Minuman,DRINK,Vietnam Drip,,19000,
-Minuman,DRINK,Coffee Latte,Hot|Ice,21000,asal: Coffee Latte Hot/Ice
-Minuman,DRINK,Salted Caramel,Hot|Ice,23000,asal: Salted Caramel Hot/Ice
-Minuman,DRINK,Butterscotch,Hot|Ice,23000,asal: Butterscotch Hot/Ice
-Minuman,DRINK,Hazelnut,Hot|Ice,23000,asal: Hazelnut Hot/Ice
-Minuman,DRINK,Mocachino,Hot|Ice,23000,asal: Mocachino Hot/Ice - ejaan dipertahankan sesuai mitra
-Minuman,DRINK,Coffee Pandan Latte Ice,,23000,hanya Ice - tidak perlu pilihan
-Minuman,DRINK,Rainbow Squash,,19000,
-Minuman,DRINK,Orange Squash,,19000,
-Minuman,DRINK,Melon Squash,,19000,
-Minuman,DRINK,Bluemount Squash,,23000,
-Minuman,DRINK,Orange Blue Squash,,25000,
-Minuman,DRINK,Leci Tea,,19000,
-Minuman,DRINK,Thai Tea,,19000,
-Ice Cream,FOOD,Ice Cup,Vanilla|Coklat|Strawberry|Lotus Biscoff|Greentea|Cappuccino|Cookies and Cream,9000,typo Vanila/Strawbery/Cappucino diperbaiki - jenis FOOD = asumsi
-Ice Cream,FOOD,Ice Cup Durian,,13000,hanya rasa Durian - tidak perlu pilihan
-Ice Cream,FOOD,Ice Cream Cupcake,Black Forest|Vanilla Chip|Lotus Biscoff|Cookies and Cream|Strawberry Cheesecake|Matcha,15000,typo Blackfores diperbaiki
+kategori,jenis,nama,pilihan,harga_kasir,catatan_perapian,foto_url
+Makanan,FOOD,Pasta Aglio Olio,,27000,,https://images.unsplash.com/photo-1633337474564-1d9478ca4e2e?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTF8fHBhc3RhJTIwc3BhZ2hldHRpfGVufDF8fHx8MTc5MTY1MTM5MXww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Pasta Bolognese,,27000,,https://images.unsplash.com/photo-1622973536968-3ead9e780960?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8M3x8cGFzdGElMjBzcGFnaGV0dGl8ZW58MXx8fHwxNzkxNjUxMzkxfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Pasta Carbonara,,27000,,https://images.unsplash.com/photo-1608756687911-aa1599ab3bd9?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8M3x8Y2FyYm9uYXJhfGVufDF8fHx8MTc5MTY1MTYzMHww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Rice Bowl Beef Teriyaki,,27000,,https://images.unsplash.com/photo-1628521061262-19b5cdb7eee5?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8NXx8cmljZSUyMGJvd2x8ZW58MXx8fHwxNzkxNjUxMzkzfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Rice Bowl Chicken Sambel Matah,,20000,,https://images.unsplash.com/photo-1670165088604-5a39f5c1be51?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Nnx8Z2FybGljJTIwYnV0dGVyJTIwY2hpY2tlbiUyMHJpY2V8ZW58MXx8fHwxNzkxNjUxNjM2fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Rice Bowl Saikoro Garlic Butter,,27000,,https://images.unsplash.com/photo-1788227372897-49ec292a9406?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTF8fGdhcmxpYyUyMGJ1dHRlciUyMGNoaWNrZW4lMjByaWNlfGVufDF8fHx8MTc5MTY1MTYzNnww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Rice Bowl Beef Bulgogi,,27000,,https://images.unsplash.com/photo-1682566509568-ded8649b26bb?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8OHx8cmljZSUyMGJvd2x8ZW58MXx8fHwxNzkxNjUxMzkzfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Rice Bowl Chicken Nanban,,25000,,https://images.unsplash.com/photo-1679279726946-a158b8bcaa23?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Nnx8cmljZSUyMGJvd2x8ZW58MXx8fHwxNzkxNjUxMzkzfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Rice Bowl Chicken Garlic Butter,,22000,,https://images.unsplash.com/photo-1564671165093-20688ff1fffa?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Mnx8Z2FybGljJTIwYnV0dGVyJTIwY2hpY2tlbiUyMHJpY2V8ZW58MXx8fHwxNzkxNjUxNjM2fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Rice Bowl Ayam Geprek,,22000,,https://images.unsplash.com/photo-1569058242252-623df46b5025?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Mnx8aW5kb25lc2lhbiUyMGZyaWVkJTIwY2hpY2tlbiUyMHJpY2V8ZW58MXx8fHwxNzkxNjUxNDAzfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Beef Hamburg Steak,Saos Mushroom|Saos Blackpepper|Saos Barbeque,35000,pilihan saos dipindah dari kolom keterangan,https://images.unsplash.com/photo-1719464453735-08166cde86d0?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8NHx8aGFtYnVyZyUyMHN0ZWFrfGVufDF8fHx8MTc5MTY1MTM5NXww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Chicken Crispy Steak,Saos Mushroom|Saos Blackpepper|Saos Barbeque,25000,pilihan saos dipindah dari kolom keterangan,https://images.unsplash.com/photo-1565511223310-ee01e273da15?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Nnx8Y3Jpc3B5JTIwY2hpY2tlbiUyMHN0ZWFrfGVufDF8fHx8MTc5MTY1MTM5N3ww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Mac & Cheese,,27000,,https://images.unsplash.com/photo-1667499989723-c4ab9549d63c?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MXx8bWFjJTIwYW5kJTIwY2hlZXNlfGVufDF8fHx8MTc5MTY1MTM5OXww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Bakso Campur,,19000,,https://images.unsplash.com/photo-1677011454858-8ecb6d4e6ce0?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8N3x8bWVhdGJhbGwlMjBzb3VwfGVufDF8fHx8MTc5MTY1MTQwMHww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Nasi Ayam Kremes,,17000,,https://images.unsplash.com/photo-1661830974665-7da532cfaba2?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8OHx8aW5kb25lc2lhbiUyMGZyaWVkJTIwY2hpY2tlbiUyMHJpY2V8ZW58MXx8fHwxNzkxNjUxNDAzfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Nasi Ayam Bakar,,17000,,https://images.unsplash.com/photo-1630315500315-43112e2bfd88?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8NXx8aW5kb25lc2lhbiUyMGZyaWVkJTIwY2hpY2tlbiUyMHJpY2V8ZW58MXx8fHwxNzkxNjUxNDAzfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Nasi Ayam Kalasan,,19000,,https://images.unsplash.com/photo-1666239308347-4292ea2ff777?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8M3x8aW5kb25lc2lhbiUyMGZyaWVkJTIwY2hpY2tlbiUyMHJpY2V8ZW58MXx8fHwxNzkxNjUxNDAzfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Nasi Soto Ayam,,15000,,https://images.unsplash.com/photo-1677029969063-23ecbb98d0af?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Mnx8c290byUyMGF5YW18ZW58MXx8fHwxNzkxNjUxNDA0fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Nasi Lele Goreng,,18000,,https://images.unsplash.com/photo-1790009601970-7ff7a0a573ec?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8OXx8ZnJpZWQlMjBjYXRmaXNofGVufDF8fHx8MTc5MTY1MTQwNXww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Nasi Lele Bakar,,20000,,https://images.unsplash.com/photo-1600175074394-f2f4c500f7ea?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Mnx8Z3JpbGxlZCUyMGZpc2glMjByaWNlfGVufDF8fHx8MTc5MTY1MTQwN3ww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Nasi Nila Goreng,,23000,,https://images.unsplash.com/photo-1625477811132-8480c94cd010?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8OHx8ZnJpZWQlMjBjYXRmaXNofGVufDF8fHx8MTc5MTY1MTQwNXww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Nasi Nila Bakar,,25000,,https://images.unsplash.com/photo-1666437469803-c6d5ba853a50?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8NHx8Z3JpbGxlZCUyMGZpc2glMjByaWNlfGVufDF8fHx8MTc5MTY1MTQwN3ww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Nasi Goreng Jawa,,17000,,https://images.unsplash.com/photo-1680674814945-7945d913319c?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Mnx8bmFzaSUyMGdvcmVuZ3xlbnwxfHx8fDE3OTE2NTE0MDl8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Mie Goreng Jawa,,17000,,https://images.unsplash.com/photo-1660927428756-6bc80dcf836e?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTJ8fG1pZSUyMGdvcmVuZ3xlbnwxfHx8fDE3OTE2NTE0MTB8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Nasi Goreng Magelangan,,19000,,https://images.unsplash.com/photo-1680674774705-90b4904b3a7f?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MXx8bmFzaSUyMGdvcmVuZ3xlbnwxfHx8fDE3OTE2NTE0MDl8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Mie Ayam Chili Oil,,25000,,https://images.unsplash.com/photo-1644083130607-b5ecc6cc7e8e?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Nnx8Y2hpY2tlbiUyMG5vb2RsZXN8ZW58MXx8fHwxNzkxNjUxNDEyfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Mie Ayam Katsu,,25000,,https://images.unsplash.com/photo-1628839168545-bfa1bc1d6706?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTB8fGNoaWNrZW4lMjBub29kbGVzfGVufDF8fHx8MTc5MTY1MTQxMnww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Indomie Ori,Kuah|Goreng,9000,asal: Indomie Kuah/Goreng ORI,https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8M3x8bWllJTIwZ29yZW5nfGVufDF8fHx8MTc5MTY1MTQxMHww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Makanan,FOOD,Indomie Telor,Kuah|Goreng,12000,asal: Indomie Kuah/Goreng Telor,https://images.unsplash.com/photo-1600326145359-3a44909d1a39?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Mnx8aW5zdGFudCUyMG5vb2RsZXMlMjBlZ2d8ZW58MXx8fHwxNzkxNjUxNDEzfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Mendoan,,10000,,https://images.unsplash.com/photo-1650527815758-fdc3f3ea5ede?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Nnx8dGVtcGVoJTIwZnJpdHRlcnN8ZW58MXx8fHwxNzkxNjUxNDE1fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Roti Bakar (Coklat / Keju),Coklat|Keju,10000,asal: Roti Bakar Coklat/Keju - nama perlu konfirmasi mitra,https://images.unsplash.com/photo-1693835791992-ae0c42f7074d?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Mnx8dG9hc3QlMjBicmVhZCUyMGNob2NvbGF0ZXxlbnwxfHx8fDE3OTE2NTE0MTZ8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Roti Bakar (Coklat Keju / Nutella / Skippy),Coklat Keju|Nutella|Skippy,15000,asal: Roti Bakar Coklat Keju/Nutela/Skippy - typo Nutela diperbaiki,https://images.unsplash.com/photo-1693858326799-3299d7317f69?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MXx8dG9hc3QlMjBicmVhZCUyMGNob2NvbGF0ZXxlbnwxfHx8fDE3OTE2NTE0MTZ8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Pisang Bakar (Coklat / Keju),Coklat|Keju,12000,asal: Pisang Bakar Coklat/Keju,https://images.unsplash.com/photo-1507835418932-dfcc1a16d393?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8M3x8Z3JpbGxlZCUyMGJhbmFuYXxlbnwxfHx8fDE3OTE2NTE0MTh8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Pisang Bakar Coklat Keju,,15000,produk berbeda dari baris sebelumnya (isi coklat + keju),https://images.unsplash.com/photo-1567580730151-e4a2ceef0ec5?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8OHx8Z3JpbGxlZCUyMGJhbmFuYXxlbnwxfHx8fDE3OTE2NTE0MTh8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Pisang Goreng Karamel,,15000,,https://images.unsplash.com/photo-1762941904142-9d91ca413e66?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Mnx8ZnJpZWQlMjBiYW5hbmF8ZW58MXx8fHwxNzkxNjUxNDE5fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Pisang Goreng Keju,,15000,,https://images.unsplash.com/photo-1768701545045-57e97e2d479c?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8NXx8ZnJpZWQlMjBiYW5hbmF8ZW58MXx8fHwxNzkxNjUxNDE5fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,French Fries,,15000,,https://images.unsplash.com/photo-1661081090290-9b66fd49d882?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTJ8fGZyZW5jaCUyMGZyaWVzfGVufDF8fHx8MTc5MTY1MTQyMHww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Snack Platter,,20000,typo Plater diperbaiki,https://images.unsplash.com/photo-1623653387945-2fd25214f8fc?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8NHx8c25hY2slMjBwbGF0dGVyfGVufDF8fHx8MTc5MTY1MTQyMnww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Cheese Bite,,17000,,https://images.unsplash.com/photo-1583005821647-8a31a52823dd?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTJ8fGZyaWVkJTIwY2hlZXNlJTIwYmFsbHN8ZW58MXx8fHwxNzkxNjUxNDI0fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Cireng,,10000,,https://images.unsplash.com/photo-1644143452702-e883f31d7476?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MXx8ZnJpZWQlMjB0b2Z1JTIwc25hY2t8ZW58MXx8fHwxNzkxNjUxNDI2fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Mac Nugget,,17000,,https://images.unsplash.com/photo-1627662055487-551888db3aa8?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Nnx8Y2hpY2tlbiUyMG51Z2dldHN8ZW58MXx8fHwxNzkxNjUxNDI3fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Singkong Ori,,15000,,https://images.unsplash.com/photo-1684893265739-a88b30c33e92?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8N3x8Y2Fzc2F2YXxlbnwxfHx8fDE3OTE2NTE2MzR8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Singkong Keju,,18000,,https://images.unsplash.com/photo-1684893265739-a88b30c33e92?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8N3x8Y2Fzc2F2YXxlbnwxfHx8fDE3OTE2NTE2MzR8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Singkong Spicy,,18000,,https://images.unsplash.com/photo-1740993384870-0793845268e6?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTJ8fGNhc3NhdmF8ZW58MXx8fHwxNzkxNjUxNjM0fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Tahu Aci Mini,,15000,,https://images.unsplash.com/photo-1690949237809-3f0336b9ba33?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Mnx8ZnJpZWQlMjB0b2Z1JTIwc25hY2t8ZW58MXx8fHwxNzkxNjUxNDI2fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Dimsum Rendang,,18000,,https://images.unsplash.com/photo-1563245370-63ffc97abdbd?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTJ8fGRpbSUyMHN1bXxlbnwxfHx8fDE3OTE2NTE0Mjl8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Snack,FOOD,Sosis Roll,,18000,,https://images.unsplash.com/photo-1743012492397-c6680eaa2c5d?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8NHx8c2F1c2FnZSUyMHJvbGx8ZW58MXx8fHwxNzkxNjUxNDMxfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Jeruk,Hot|Ice,15000,asal: Jeruk Hot/Ice,https://images.unsplash.com/photo-1613478223719-2ab802602423?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Mnx8b3JhbmdlJTIwanVpY2UlMjBnbGFzc3xlbnwxfHx8fDE3OTE2NTE0MzJ8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Chocolate,Hot|Ice,20000,asal: Chocolate Hot/Ice,https://images.unsplash.com/photo-1517578239113-b03992dcdd25?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8M3x8aG90JTIwY2hvY29sYXRlfGVufDF8fHx8MTc5MTY1MTQzNHww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Matcha Latte,Hot|Ice,20000,asal: Matcha Latte Hot/Ice,https://images.unsplash.com/photo-1582785513054-8d1bf9d69c1a?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Nnx8bWF0Y2hhJTIwbGF0dGV8ZW58MXx8fHwxNzkxNjUxNDM1fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Taro Latte,Hot|Ice,20000,asal: Taro Latte Hot/Ice,https://images.unsplash.com/photo-1638176311291-36b0eacc6b08?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8N3x8ZnJ1aXQlMjB5b2d1cnQlMjBkcmlua3xlbnwxfHx8fDE3OTE2NTE0Mzl8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Mango Yakult,,20000,,https://images.unsplash.com/photo-1604298331663-de303fbc7059?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Nnx8ZnJ1aXQlMjB5b2d1cnQlMjBkcmlua3xlbnwxfHx8fDE3OTE2NTE0Mzl8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Leci Yakult,,20000,,https://images.unsplash.com/photo-1560848119-ec9255fd285b?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8OXx8c3RyYXdiZXJyeSUyMG1pbGt8ZW58MXx8fHwxNzkxNjUxNDQwfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Melon Yakult,,20000,,https://images.unsplash.com/photo-1555791902-2bd22de5cd9c?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTF8fGZydWl0JTIweW9ndXJ0JTIwZHJpbmt8ZW58MXx8fHwxNzkxNjUxNDM5fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Korean Strawberry Milk,,25000,,https://images.unsplash.com/photo-1629174114500-6ec256a6213f?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTF8fHN0cmF3YmVycnklMjBtaWxrfGVufDF8fHx8MTc5MTY1MTQ0MHww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Choco Matcha Ice,,23000,hanya Ice - tidak perlu pilihan,https://images.unsplash.com/photo-1749280447307-31a68eb38673?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8NHx8bWF0Y2hhJTIwbGF0dGV8ZW58MXx8fHwxNzkxNjUxNDM1fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Air Mineral,,5000,,https://images.unsplash.com/photo-1643114451704-8f44b1d1a681?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8OXx8Z2xhc3MlMjBvZiUyMHdhdGVyfGVufDF8fHx8MTc5MTY1MTQ0Mnww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Teh Tawar,Hot|Ice,5000,asal: Teh Tawar Ice/Hot,https://images.unsplash.com/photo-1652283824336-dfcee94dd02b?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8N3x8dGVhJTIwZ2xhc3N8ZW58MXx8fHwxNzkxNjUxNDQ0fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Teh Manis,Hot|Ice,8000,asal: Teh Manis Hot/Ice,https://images.unsplash.com/photo-1703112544229-7f148a98c595?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTJ8fHRlYSUyMGdsYXNzfGVufDF8fHx8MTc5MTY1MTQ0NHww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Lemon Tea,Hot|Ice,17000,asal: Lemon Tea Hot/Ice,https://images.unsplash.com/photo-1470752354724-60a1d2b1907f?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8N3x8aWNlZCUyMGxlbW9uJTIwdGVhfGVufDF8fHx8MTc5MTY1MTQ0N3ww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Teh Telang,Hot|Ice,15000,asal: Teh Telang Hot/Ice,https://images.unsplash.com/photo-1753032507946-6dbec1653674?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8N3x8YnV0dGVyZmx5JTIwcGVhJTIwdGVhfGVufDF8fHx8MTc5MTY1MTQ0NXww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Kopi Tubruk,Hot|Ice,12000,asal: Kopi Tubruk Hot/Ice,https://images.unsplash.com/photo-1676855218461-60f1ea499112?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8M3x8YmxhY2slMjBjb2ZmZWUlMjBnbGFzc3xlbnwxfHx8fDE3OTE2NTE0NDl8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Kopi Tubruk Susu,Hot|Ice,15000,asal: Kopi Tubruk Susu Hot/Ice,https://images.unsplash.com/photo-1601816993296-a2d1ce3e001f?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8N3x8YmxhY2slMjBjb2ZmZWUlMjBnbGFzc3xlbnwxfHx8fDE3OTE2NTE0NDl8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Vietnam Drip,,19000,,https://images.unsplash.com/photo-1662105489808-f3dd79b7f13c?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8M3x8dmlldG5hbWVzZSUyMGNvZmZlZXxlbnwxfHx8fDE3OTE2NTE0NTB8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Coffee Latte,Hot|Ice,21000,asal: Coffee Latte Hot/Ice,https://images.unsplash.com/photo-1570968915860-54d5c301fa9f?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTJ8fGxhdHRlJTIwY29mZmVlfGVufDF8fHx8MTc5MTY1MTQ1Mnww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Salted Caramel,Hot|Ice,23000,asal: Salted Caramel Hot/Ice,https://images.unsplash.com/photo-1461023058943-07fcbe16d735?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MXx8dmlldG5hbWVzZSUyMGNvZmZlZXxlbnwxfHx8fDE3OTE2NTE0NTB8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Butterscotch,Hot|Ice,23000,asal: Butterscotch Hot/Ice,https://images.unsplash.com/photo-1664515725366-e8328e9dc834?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8NXx8dmlldG5hbWVzZSUyMGNvZmZlZXxlbnwxfHx8fDE3OTE2NTE0NTB8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Hazelnut,Hot|Ice,23000,asal: Hazelnut Hot/Ice,https://images.unsplash.com/photo-1587080413959-06b859fb107d?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTB8fGxhdHRlJTIwY29mZmVlfGVufDF8fHx8MTc5MTY1MTQ1Mnww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Mocachino,Hot|Ice,23000,asal: Mocachino Hot/Ice - ejaan dipertahankan sesuai mitra,https://images.unsplash.com/photo-1533776992670-a72f4c28235e?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8NXx8bGF0dGUlMjBjb2ZmZWV8ZW58MXx8fHwxNzkxNjUxNDUyfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Coffee Pandan Latte Ice,,23000,hanya Ice - tidak perlu pilihan,https://images.unsplash.com/photo-1664515725552-d47d97e7da3a?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTF8fHZpZXRuYW1lc2UlMjBjb2ZmZWV8ZW58MXx8fHwxNzkxNjUxNDUwfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Rainbow Squash,,19000,,https://images.unsplash.com/photo-1595977514600-72cbc8376c38?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Mnx8bW9ja3RhaWx8ZW58MXx8fHwxNzkxNjUxNDUzfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Orange Squash,,19000,,https://images.unsplash.com/photo-1619604394865-437a9fd6853c?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTJ8fG1vY2t0YWlsfGVufDF8fHx8MTc5MTY1MTQ1M3ww&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Melon Squash,,19000,,https://images.unsplash.com/photo-1634496064950-02f043806b09?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8NHx8bW9ja3RhaWx8ZW58MXx8fHwxNzkxNjUxNDUzfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Bluemount Squash,,23000,,https://images.unsplash.com/photo-1654074518423-750767f571a9?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8Nnx8bW9ja3RhaWx8ZW58MXx8fHwxNzkxNjUxNDUzfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Orange Blue Squash,,25000,,https://images.unsplash.com/photo-1654074517750-f854f7c27d62?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MXx8bW9ja3RhaWx8ZW58MXx8fHwxNzkxNjUxNDUzfDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Leci Tea,,19000,,https://images.unsplash.com/photo-1623934397237-ce68cb0285b3?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTB8fGljZWQlMjBsZW1vbiUyMHRlYXxlbnwxfHx8fDE3OTE2NTE0NDd8MA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Minuman,DRINK,Thai Tea,,19000,,https://images.unsplash.com/photo-1644203541701-0c534473e616?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8M3x8dGhhaSUyMGljZWQlMjB0ZWF8ZW58MXx8fHwxNzkxNjUxNDU1fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Ice Cream,FOOD,Ice Cup,Vanilla|Coklat|Strawberry|Lotus Biscoff|Greentea|Cappuccino|Cookies and Cream,9000,typo Vanila/Strawbery/Cappucino diperbaiki - jenis FOOD = asumsi,https://images.unsplash.com/photo-1621693129587-48dd0d0aa740?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8OHx8aWNlJTIwY3JlYW0lMjBjdXB8ZW58MXx8fHwxNzkxNjUxNDU3fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Ice Cream,FOOD,Ice Cup Durian,,13000,hanya rasa Durian - tidak perlu pilihan,https://images.unsplash.com/photo-1534706936160-d5ee67737249?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8M3x8aWNlJTIwY3JlYW0lMjBjdXB8ZW58MXx8fHwxNzkxNjUxNDU3fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format
+Ice Cream,FOOD,Ice Cream Cupcake,Black Forest|Vanilla Chip|Lotus Biscoff|Cookies and Cream|Strawberry Cheesecake|Matcha,15000,typo Blackfores diperbaiki,https://images.unsplash.com/photo-1607478900766-efe13248b125?ixid=M3wxMDk4MzY2fDB8MXxzZWFyY2h8MTF8fGN1cGNha2V8ZW58MXx8fHwxNzkxNjUxNDU4fDA&ixlib=rb-4.1.0&w=600&h=600&fit=crop&q=75&auto=format

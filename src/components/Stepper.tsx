@@ -1,5 +1,7 @@
 "use client";
 
+import { Check } from "lucide-react";
+
 interface StepperProps {
   currentStep: 1 | 2 | 3 | 4 | 5;
 }
@@ -55,7 +57,7 @@ export function Stepper({ currentStep }: StepperProps) {
                         : "bg-gray-100 text-gray-500 border border-gray-300"
                     }`}
                   >
-                    {isPassed ? "✓" : step.num}
+                    {isPassed ? <Check className="size-3.5" strokeWidth={3} /> : step.num}
                   </div>
                   <span
                     className={`text-xs whitespace-nowrap font-medium ${

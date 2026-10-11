@@ -19,7 +19,7 @@ export function saveTicketLink(input: {
     `Kode: ${input.code}\n` +
     `Ruangan: ${input.roomName} • ${jadwal}\n` +
     `Tamu: ${input.guestCount} orang\n` +
-    `Lihat QR check-in: ${input.appUrl}/tiket/${input.ticketToken}`;
+    `Lihat e-tiket: ${input.appUrl}/tiket/${input.ticketToken}`;
 
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }

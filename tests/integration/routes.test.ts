@@ -23,10 +23,11 @@ describe("End-to-End API Routes (Hari 1)", () => {
     await prisma.product.deleteMany();
     await prisma.category.deleteMany();
     await prisma.room.deleteMany();
+    await prisma.setting.deleteMany();
 
     await seed(prisma);
 
-    const room = await prisma.room.findFirst({ where: { slug: "the-loft" } });
+    const room = await prisma.room.findFirst({ where: { slug: "ruangan-1" } });
     roomId = room!.id;
 
     const food = await prisma.product.findFirst({ where: { name: "Pasta Aglio Olio" } });
@@ -58,7 +59,7 @@ describe("End-to-End API Routes (Hari 1)", () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.success).toBe(true);
-    expect(json.data.rooms.length).toBe(3);
+    expect(json.data.rooms.length).toBe(4);
     const loft = json.data.rooms.find(
       (r: { id: string; available: boolean }) => r.id === roomId
     );
@@ -115,7 +116,7 @@ describe("End-to-End API Routes (Hari 1)", () => {
     const createJson = await createRes.json();
     expect(createJson.success).toBe(true);
     const { code, ticketToken, snapToken, totalAmount } = createJson.data;
-    expect(code).toMatch(/^ATM-/);
+    expect(code).toMatch(/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}$/);
     expect(ticketToken).toBeDefined();
     expect(snapToken).toContain("fake_snap_token_");
     expect(totalAmount).toBe(87000);
@@ -147,6 +148,17 @@ describe("End-to-End API Routes (Hari 1)", () => {
     const lookupJson = await lookupRes.json();
     expect(lookupJson.success).toBe(true);
     expect(lookupJson.data.ticketToken).toBe(ticketToken);
+
+    // 3b. Kode yang diketik huruf kecil tetap ketemu
+    const lowerRes = await lookupTicketRoute(
+      new NextRequest("http://localhost:3000/api/tickets/lookup", {
+        method: "POST",
+        body: JSON.stringify({ code: code.toLowerCase(), phone: "0812-3456-7890" }),
+        headers: { "Content-Type": "application/json", "x-forwarded-for": "10.0.0.50" },
+      })
+    );
+    expect(lowerRes.status).toBe(200);
+    expect((await lowerRes.json()).data.ticketToken).toBe(ticketToken);
 
     // 4. Invalid lookup returns 404
     const badLookupReq = new NextRequest("http://localhost:3000/api/tickets/lookup", {
@@ -184,6 +196,46 @@ describe("End-to-End API Routes (Hari 1)", () => {
     const json = await res.json();
     expect(json.success).toBe(false);
     expect(json.error.code).toBe("CART_RULE");
+  });
+
+  it("POST /api/tickets/lookup: percobaan ke-11 dari IP yang sama → 429, IP lain tidak ikut terblokir", async () => {
+    const lookup = (ip: string, code: string) =>
+      lookupTicketRoute(
+        new NextRequest("http://localhost:3000/api/tickets/lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-forwarded-for": ip },
+          body: JSON.stringify({ code, phone: "081234567890" }),
+        })
+      );
+
+    for (let i = 0; i < 10; i++) {
+      expect((await lookup("10.0.0.9", "ZZZ9")).status).toBe(404);
+    }
+    const blocked = await lookup("10.0.0.9", "ZZZ9");
+    expect(blocked.status).toBe(429);
+    expect((await blocked.json()).error.code).toBe("RATE_LIMITED");
+
+    expect((await lookup("10.0.0.10", "ZZZ9")).status).toBe(404);
+  });
+
+  it("POST /api/reservations with invalid WA number returns 400, not 500", async () => {
+    const req = new NextRequest("http://localhost:3000/api/reservations", {
+      method: "POST",
+      body: JSON.stringify({
+        roomId,
+        date: "2026-10-18",
+        start: "10:00",
+        end: "12:00",
+        guestCount: 4,
+        items: [{ productId: foodId, option: null, quantity: 2 }],
+        servingTime: "ON_ARRIVAL",
+        customer: { name: "Budi Santoso", phone: "12345" },
+      }),
+      headers: { "Content-Type": "application/json" },
+    });
+    const res = await createReservationRoute(req);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("VALIDATION_ERROR");
   });
 
   it("POST /api/payments/midtrans/notification handles webhook and updates status", async () => {

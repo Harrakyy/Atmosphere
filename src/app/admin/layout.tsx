@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { CalendarDays, ChefHat, DoorOpen, ExternalLink, LogOut, Settings, UtensilsCrossed } from "lucide-react";
 
 export default function AdminLayout({
   children,
@@ -24,21 +25,21 @@ export default function AdminLayout({
   };
 
   const navItems = [
-    { label: "📋 Reservasi", href: "/admin", active: pathname === "/admin" || pathname.startsWith("/admin/reservasi") },
-    { label: "🍳 Dapur", href: "/admin/dapur", active: pathname === "/admin/dapur" },
-    { label: "🚪 Ruangan", href: "/admin/ruangan", active: pathname === "/admin/ruangan" },
-    { label: "🍽️ Menu", href: "/admin/menu", active: pathname === "/admin/menu" },
-    { label: "⚙️ Pengaturan", href: "/admin/pengaturan", active: pathname === "/admin/pengaturan" },
+    { label: "Reservasi", icon: CalendarDays, href: "/admin", active: pathname === "/admin" || pathname.startsWith("/admin/reservasi") },
+    { label: "Dapur", icon: ChefHat, href: "/admin/dapur", active: pathname === "/admin/dapur" },
+    { label: "Ruangan", icon: DoorOpen, href: "/admin/ruangan", active: pathname === "/admin/ruangan" },
+    { label: "Menu", icon: UtensilsCrossed, href: "/admin/menu", active: pathname === "/admin/menu" },
+    { label: "Pengaturan", icon: Settings, href: "/admin/pengaturan", active: pathname === "/admin/pengaturan" },
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F3F2EF]">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Top Admin Navbar */}
-      <header className="sticky top-0 z-40 bg-[#1C2955] text-white border-b border-[#1A2751] shadow-xs">
+      <header className="sticky top-0 z-40 bg-primary text-primary-foreground border-b border-primary shadow-xs">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/admin" className="font-extrabold text-lg tracking-tight">
-              atmosphere<span className="text-[#D81B60]">.admin</span>
+              atmosphere<span className="text-brand">.admin</span>
             </Link>
 
             {/* Desktop Navigation Links */}
@@ -47,12 +48,13 @@ export default function AdminLayout({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all ${
+                  className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all ${
                     item.active
                       ? "bg-white/20 text-white"
                       : "text-white/70 hover:text-white hover:bg-white/10"
                   }`}
                 >
+                  <item.icon className="size-3.5" />
                   {item.label}
                 </Link>
               ))}
@@ -63,16 +65,17 @@ export default function AdminLayout({
             <Link
               href="/"
               target="_blank"
-              className="text-xs text-white/70 hover:text-white hidden sm:inline-block px-2.5 py-1 rounded-md border border-white/20"
+              className="text-xs text-white/70 hover:text-white hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/20"
             >
-              Lihat Web ↗
+              Lihat Web <ExternalLink className="size-3" />
             </Link>
 
             <button
               type="button"
               onClick={handleLogout}
-              className="text-xs font-bold px-3 py-1.5 rounded-lg bg-rose-500/20 text-rose-200 hover:bg-rose-500/30 transition-colors"
+              className="text-xs font-bold px-3 py-1.5 inline-flex items-center gap-1.5 rounded-lg bg-rose-500/20 text-rose-200 hover:bg-rose-500/30 transition-colors"
             >
+              <LogOut className="size-3.5" />
               Logout
             </button>
           </div>
@@ -84,12 +87,13 @@ export default function AdminLayout({
             <Link
               key={item.href}
               href={item.href}
-              className={`text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
+              className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
                 item.active
                   ? "bg-white/20 text-white"
                   : "text-white/70 hover:text-white hover:bg-white/10"
               }`}
             >
+              <item.icon className="size-3.5" />
               {item.label}
             </Link>
           ))}

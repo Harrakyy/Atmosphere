@@ -28,12 +28,13 @@ describe("Reservations Integration Tests (Day 1)", () => {
     await prisma.product.deleteMany();
     await prisma.category.deleteMany();
     await prisma.room.deleteMany();
+    await prisma.setting.deleteMany();
 
     await seed(prisma);
 
     fakeGateway = new FakeGateway();
 
-    const room = await prisma.room.findFirst({ where: { slug: "the-loft" } });
+    const room = await prisma.room.findFirst({ where: { slug: "ruangan-1" } });
     testRoomId = room!.id;
 
     const food = await prisma.product.findFirst({ where: { name: "Pasta Aglio Olio" } });
@@ -72,9 +73,10 @@ describe("Reservations Integration Tests (Day 1)", () => {
       { gateway: fakeGateway, now: fixedNow, db: prisma }
     );
 
-    expect(result.code).toMatch(/^ATM-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$/);
+    expect(result.code).toMatch(/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}$/);
     expect(result.ticketToken).toHaveLength(32);
-    expect(result.snapToken).toBe(`fake_snap_token_${result.code}`);
+    // FakeGateway membentuk snapToken dari orderId, jadi ini sekaligus membuktikan order_id bersufiks (R-I3)
+    expect(result.snapToken).toMatch(new RegExp(`^fake_snap_token_${result.code}-[0-9a-f]{8}$`));
 
     // Verify database record
     const saved = await prisma.reservation.findUnique({
@@ -310,7 +312,7 @@ describe("Reservations Integration Tests (Day 1)", () => {
   it("8. Guest count outside min/max guests: available=false with correct reasons", async () => {
     const fixedNow = wibDateTime("2026-10-16", "10:00");
 
-    // The Loft capacity is 4 - 10
+    // Ruangan 1 capacity is 4 - 10
     // Query with 2 guests
     const lowAvail = await getAvailability(
       { date: "2026-10-18", start: "10:00", end: "12:00", guests: 2 },

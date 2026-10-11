@@ -5,7 +5,7 @@
 
 ## 1. Ringkasan
 
-Customer memesan ruangan meeting di Atmosphere Cafe **sekaligus** pre-order makanan dalam satu alur di web, lalu membayar lunas lewat Midtrans dan menerima e-tiket ber-QR. Admin mengelola ruangan, menu, blokir jadwal, check-in, pembatalan/refund, dan melihat rekap persiapan dapur.
+Customer memesan ruangan meeting di Atmosphere Cafe **sekaligus** pre-order makanan dalam satu alur di web, lalu membayar lunas lewat Midtrans dan menerima e-tiket berkode booking 4 karakter. Admin mengelola ruangan, menu, blokir jadwal, check-in, pembatalan/refund, dan melihat rekap persiapan dapur.
 
 **Tolok ukur sukses MVP** (diambil dari Tabel 1 proposal):
 
@@ -26,7 +26,7 @@ Customer memesan ruangan meeting di Atmosphere Cafe **sekaligus** pre-order maka
 - Login admin
 - Kelola ruangan, blokir jadwal, kategori, produk (termasuk upload foto)
 - Daftar dan detail reservasi
-- Check-in lewat QR
+- Check-in dengan kode booking 4 karakter
 - Selesai, no-show, batal + refund (dengan template WA)
 - Reschedule oleh admin
 - Rekap dapur per tanggal
@@ -46,7 +46,7 @@ Customer memesan ruangan meeting di Atmosphere Cafe **sekaligus** pre-order maka
 | `/reservasi/ruangan` | Langkah 2: ruangan yang tersedia |
 | `/reservasi/menu` | Langkah 3: menu, keranjang, waktu penyajian, catatan dapur |
 | `/reservasi/checkout` | Langkah 4: data pemesan, ringkasan, tombol Bayar (popup Snap) |
-| `/tiket/[token]` | Langkah 5: status, QR, detail, tombol WA, unduh QR |
+| `/tiket/[token]` | Langkah 5: status, kode booking, detail, tombol WA, unduh kartu kode (PNG) |
 | `/cek-reservasi` | Cari tiket dengan kode + nomor WA |
 
 **Admin (wajib login):**
@@ -56,7 +56,7 @@ Customer memesan ruangan meeting di Atmosphere Cafe **sekaligus** pre-order maka
 | `/admin/login` | Halaman login |
 | `/admin` | Reservasi per tanggal (default hari ini) + kartu "Perlu Tindakan" |
 | `/admin/reservasi/[id]` | Detail reservasi + tombol aksi |
-| `/admin/check-in/[code]` | Halaman hasil scan QR |
+| `/admin/check-in/[code]` | Check-in tamu per kode (kasir mengetik kode di dashboard) |
 | `/admin/dapur` | Rekap persiapan per tanggal |
 | `/admin/ruangan` | Kelola ruangan + blokir jadwal |
 | `/admin/menu` | Kelola kategori + produk |
@@ -138,9 +138,9 @@ Setiap aturan diberi ID supaya bisa dirujuk di tes (`it('R-T3: …')`).
 - **R-D5:** catatan dapur maksimal 300 karakter.
 
 ### Identitas (R-I)
-- **R-I1:** `code = "ATM-" + 6 karakter acak` dari `23456789ABCDEFGHJKMNPQRSTUVWXYZ` (memakai `crypto`). Kalau bentrok dengan kode yang sudah ada, ulangi.
+- **R-I1:** `code` = 4 karakter acak (memakai `crypto`) dari `23456789ABCDEFGHJKMNPQRSTUVWXYZ`, tanpa awalan, dan **wajib minimal 1 huruf dan 1 angka**. Kalau bentrok dengan kode yang sudah ada, ulangi. Kode lama berformat `ATM-XXXXXX` tetap valid.
 - **R-I2:** `ticketToken` = 24 byte acak dalam format base64url (32 karakter).
-- **R-I3:** `order_id` Midtrans = `code`. Satu reservasi = satu transaksi Snap.
+- **R-I3:** `order_id` Midtrans = `code + "-" + 8 hex acak` (contoh `7K2F-9a3c01be`), karena `order_id` harus unik selamanya per akun Midtrans sedangkan kode 4 karakter bisa terulang. Webhook memetakan kembali ke `code` dengan membuang sufiks; `order_id` format lama (tanpa sufiks) dipakai apa adanya. Satu reservasi = satu transaksi Snap.
 
 ### Pembayaran (R-PAY)
 - **R-PAY1:** status hanya berubah lewat webhook yang **signature-nya valid**: `SHA512(order_id + status_code + gross_amount + serverKey)`, dengan `gross_amount` dipakai persis seperti string yang diterima.
@@ -163,7 +163,7 @@ Semua template memakai `encodeURIComponent`. Tanggal ditulis dalam format WIB, m
   Kode: {code}
   Ruangan: {room} • {jadwal}
   Tamu: {guestCount} orang
-  Lihat QR check-in: {APP_URL}/tiket/{ticketToken}
+  Lihat e-tiket: {APP_URL}/tiket/{ticketToken}
   ```
 - **R-W2 Hubungi Cafe** (`https://wa.me/{cafeWhatsapp}?text=`):
   ```
@@ -365,7 +365,7 @@ type ApiResponse<T> =
   | { success: true;  data: T }
   | { success: false; error: { code: string; message: string; details?: unknown } };
 ```
-**Kode HTTP:** 400 `VALIDATION_ERROR` (Zod) · 401 `UNAUTHORIZED` · 404 `NOT_FOUND` · 409 `SLOT_TAKEN` · 422 aturan bisnis (`CART_RULE`, `TIME_RULE`, `ROOM_UNAVAILABLE`, `INVALID_TRANSITION`) · 502 `PAYMENT_GATEWAY_ERROR` · 500 `INTERNAL`. Pesan `message` ditulis dalam Bahasa Indonesia dan aman ditampilkan ke user. Detail error teknis hanya ditulis ke log server.
+**Kode HTTP:** 400 `VALIDATION_ERROR` (Zod) · 401 `UNAUTHORIZED` · 404 `NOT_FOUND` · 409 `SLOT_TAKEN` · 422 aturan bisnis (`CART_RULE`, `TIME_RULE`, `ROOM_UNAVAILABLE`, `INVALID_TRANSITION`) · 429 `RATE_LIMITED` · 502 `PAYMENT_GATEWAY_ERROR` · 500 `INTERNAL`. Pesan `message` ditulis dalam Bahasa Indonesia dan aman ditampilkan ke user. Detail error teknis hanya ditulis ke log server.
 
 **Schema Zod untuk request/response disimpan di `src/contracts/`** dan dipakai bersama oleh backend dan frontend.
 
@@ -376,8 +376,8 @@ type ApiResponse<T> =
 | `GET /api/availability?date=YYYY-MM-DD&start=HH:mm&end=HH:mm&guests=N` | — | `{ rooms: [{ id, name, location, minGuests, maxGuests, facilities, photoUrl, available, reason }] }`. Kalau aturan R-T dilanggar → 422 `TIME_RULE` dengan pesan spesifik |
 | `GET /api/availability/day?roomId&date` | — | `{ busy: [{ startAt, endAt }] }` (blok jam yang terisi, termasuk buffer dan blokir) untuk tampilan kalender |
 | `POST /api/reservations` | `{ roomId, date, start, end, guestCount, items: [{ productId, option, quantity }], servingTime, servingAt?, kitchenNote?, customer: { name, phone, email? } }` | `{ code, ticketToken, totalAmount, holdExpiresAt, snapToken, snapRedirectUrl }` |
-| `GET /api/tickets/[token]` | — | `{ code, status, room, startAt, endAt, guestCount, customerName, items, totalAmount, servingTime, servingAt, kitchenNote, holdExpiresAt, snapToken?, checkInUrl, wa: { saveLink, contactCafeLink } }` (`snapToken` hanya ada kalau `PENDING_PAYMENT` dan belum kedaluwarsa) |
-| `POST /api/tickets/lookup` | `{ code, phone }` | `{ ticketToken }`. Kalau tidak cocok → 404 dengan pesan umum (tidak membocorkan mana yang salah) |
+| `GET /api/tickets/[token]` | — | `{ code, status, room, startAt, endAt, guestCount, customerName, items, totalAmount, servingTime, servingAt, kitchenNote, holdExpiresAt, snapToken?, wa: { saveLink, contactCafeLink } }` (`snapToken` hanya ada kalau `PENDING_PAYMENT` dan belum kedaluwarsa) |
+| `POST /api/tickets/lookup` | `{ code, phone }` | `{ ticketToken }`. Kalau tidak cocok → 404 dengan pesan umum (tidak membocorkan mana yang salah). Dibatasi 10 percobaan per 15 menit per IP → 429 `RATE_LIMITED` |
 | `POST /api/payments/midtrans/notification` | Payload Midtrans | `{ received: true }` |
 
 ### Admin (wajib sesi Better Auth; tanpa sesi → 401)
@@ -470,13 +470,14 @@ ADMIN_SEED_PASSWORD=
 ```
 Validasi semua env dengan Zod saat aplikasi start (`src/server/env.ts`). Kalau ada yang kosong, aplikasi gagal start dengan pesan yang jelas.
 
-## 11. Seed Ruangan (asumsi ❓ sampai ada data dari mitra)
+## 11. Seed Ruangan (foto asli dari cafe di `public/ruangan/`; kapasitas & fasilitas masih asumsi ❓)
 
-| Nama | Lokasi | Min–Maks tamu | Fasilitas |
+| Nama | Foto | Min–Maks tamu | Fasilitas |
 |---|---|---|---|
-| The Loft | Lantai 2 | 4–10 | TV, AC, Wi-Fi, Stopkontak |
-| The Sunroom | Lantai 1 | 2–6 | AC, Wi-Fi, Stopkontak |
-| Event Space | Lantai 2 | 10–30 | TV, Mic, AC, Wi-Fi, Stopkontak |
+| Ruangan 1 | `/ruangan/1.jpeg` | 4–10 | TV, AC, Wi-Fi, Stopkontak |
+| Ruangan 2 | `/ruangan/2.jpeg` | 2–6 | AC, Wi-Fi, Stopkontak |
+| Ruangan 3 | `/ruangan/3.jpeg` | 10–30 | TV, Mic, AC, Wi-Fi, Stopkontak |
+| Ruangan 4 | `/ruangan/4.jpeg` | 4–12 | AC, Wi-Fi, Stopkontak |
 
 ## 12. Strategi Tes & Definition of Done
 

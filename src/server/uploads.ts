@@ -66,6 +66,10 @@ export async function uploadImage(file: File | Blob): Promise<UploadResult> {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
 
   if (!token || token.includes("placeholder")) {
+    if (process.env.NODE_ENV === "production") {
+      throw new AppError("INTERNAL", "Penyimpanan foto belum dikonfigurasi.", 500);
+    }
+    // shortcut: URL palsu untuk dev/tes tanpa token Blob, produksi wajib punya BLOB_READ_WRITE_TOKEN
     return { url: `https://blob.vercel-storage.com/${filename}` };
   }
 

@@ -29,13 +29,14 @@ describe("Hari 3 End-to-End Customer and Admin Flow", () => {
     await prisma.product.deleteMany();
     await prisma.category.deleteMany();
     await prisma.room.deleteMany();
+    await prisma.setting.deleteMany();
     await prisma.session.deleteMany();
     await prisma.account.deleteMany();
     await prisma.user.deleteMany();
 
     await seed(prisma);
 
-    const room = await prisma.room.findFirst({ where: { slug: "the-loft" } });
+    const room = await prisma.room.findFirst({ where: { slug: "ruangan-1" } });
     roomId = room!.id;
 
     const food = await prisma.product.findFirst({ where: { name: "Pasta Aglio Olio" } });
@@ -56,7 +57,7 @@ describe("Hari 3 End-to-End Customer and Admin Flow", () => {
     adminCookie = signInResult.headers.get("set-cookie") || "";
   });
 
-  it("Executes the complete customer booking, payment webhook, e-ticket, QR check-in, and kitchen queue cycle", async () => {
+  it("Executes the complete customer booking, payment webhook, e-ticket, check-in by code, and kitchen queue cycle", async () => {
     const bookingDate = "2026-10-18";
 
     // 1. Customer searches availability (Langkah 1 & 2)
@@ -107,7 +108,7 @@ describe("Hari 3 End-to-End Customer and Admin Flow", () => {
     expect(checkoutJson.success).toBe(true);
 
     const { code, ticketToken, totalAmount, snapToken } = checkoutJson.data;
-    expect(code).toMatch(/^ATM-/);
+    expect(code).toMatch(/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}$/);
     expect(ticketToken).toBeDefined();
     expect(totalAmount).toBe(87000); // (28000 * 2) + (15500 * 2) = 56000 + 31000 = 87000
     expect(snapToken).toBeDefined();
@@ -139,14 +140,14 @@ describe("Hari 3 End-to-End Customer and Admin Flow", () => {
     const notifRes = await notificationRoute(notifReq);
     expect(notifRes.status).toBe(200);
 
-    // 6. Ticket is now CONFIRMED and has checkInUrl for QR code
+    // 6. Ticket is now CONFIRMED; no QR/checkInUrl anymore, staff check in by typing the code
     const ticketConfirmedRes = await getTicketRoute(
       new NextRequest(`http://localhost:3000/api/tickets/${ticketToken}`),
       { params: Promise.resolve({ token: ticketToken }) }
     );
     const ticketConfirmedJson = await ticketConfirmedRes.json();
     expect(ticketConfirmedJson.data.status).toBe("CONFIRMED");
-    expect(ticketConfirmedJson.data.checkInUrl).toContain(`/admin/check-in/${code}`);
+    expect(ticketConfirmedJson.data).not.toHaveProperty("checkInUrl");
 
     // 7. Customer can lookup their booking from /cek-reservasi
     const lookupReq = new NextRequest("http://localhost:3000/api/tickets/lookup", {
@@ -162,7 +163,7 @@ describe("Hari 3 End-to-End Customer and Admin Flow", () => {
     const lookupJson = await lookupRes.json();
     expect(lookupJson.data.ticketToken).toBe(ticketToken);
 
-    // 8. Staff scans QR code -> loads summary at /admin/check-in/[code]
+    // 8. Staff types the 4-char code -> loads summary at /admin/check-in/[code]
     const scannerReq = new NextRequest(
       `http://localhost:3000/api/admin/check-in/${code}`,
       { headers: { cookie: adminCookie } }
@@ -174,7 +175,7 @@ describe("Hari 3 End-to-End Customer and Admin Flow", () => {
     const scannerJson = await scannerRes.json();
     expect(scannerJson.success).toBe(true);
     expect(scannerJson.data.customerName).toBe("Siti Rahma");
-    expect(scannerJson.data.room.name).toBe("The Loft");
+    expect(scannerJson.data.room.name).toBe("Ruangan 1");
     expect(scannerJson.data.items).toHaveLength(2);
 
     const reservationId = scannerJson.data.id;

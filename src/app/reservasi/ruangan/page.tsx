@@ -5,8 +5,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { Stepper } from "@/components/Stepper";
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, Clock, Info, MapPin, Users } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useBookingDraft } from "@/lib/booking-draft";
-import { formatDateIndo } from "@/lib/format";
+import { formatDateIndo, formatTimeRange } from "@/lib/format";
 
 interface RoomAvailability {
   id: string;
@@ -18,6 +24,20 @@ interface RoomAvailability {
   photoUrl: string | null;
   available: boolean;
   reason: "CAPACITY_TOO_SMALL" | "BELOW_MIN_GUESTS" | "BOOKED" | "BLOCKED" | null;
+}
+
+interface BusySlot {
+  startAt: string;
+  endAt: string;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Blokir sehari penuh dipotong server ke 00.00–00.00, jadi ditampilkan sebagai "Seharian"
+function formatBusySlot(slot: BusySlot): string {
+  return Date.parse(slot.endAt) - Date.parse(slot.startAt) >= DAY_MS
+    ? "Seharian"
+    : formatTimeRange(slot.startAt, slot.endAt).replace(" WIB", "");
 }
 
 function getReasonBadge(reason: RoomAvailability["reason"], room: RoomAvailability) {
@@ -42,6 +62,7 @@ export default function PilihRuanganPage() {
   const [rooms, setRooms] = useState<RoomAvailability[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [busyByRoom, setBusyByRoom] = useState<Record<string, readonly BusySlot[]>>({});
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -69,7 +90,25 @@ export default function PilihRuanganPage() {
           throw new Error(json.error?.message || "Gagal memuat ketersediaan ruangan");
         }
 
-        setRooms(json.data.rooms || []);
+        const fetchedRooms: RoomAvailability[] = json.data.rooms || [];
+        setRooms(fetchedRooms);
+
+        // Jam terisi per ruangan hanya info tambahan: kalau gagal, kartu tetap tampil tanpa daftar ini
+        const busyEntries = await Promise.all(
+          fetchedRooms.map(async (room) => {
+            try {
+              const busyRes = await fetch(
+                `/api/availability/day?${new URLSearchParams({ roomId: room.id, date: draft.date })}`
+              );
+              const busyJson = await busyRes.json();
+              const busy: BusySlot[] = busyJson.success ? busyJson.data.busy : [];
+              return [room.id, [...busy].sort((a, b) => a.startAt.localeCompare(b.startAt))] as const;
+            } catch {
+              return [room.id, []] as const;
+            }
+          })
+        );
+        setBusyByRoom(Object.fromEntries(busyEntries));
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "Terjadi kesalahan koneksi");
       } finally {
@@ -92,59 +131,65 @@ export default function PilihRuanganPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F3F2EF]">
+    <div className="min-h-screen flex flex-col">
       <Header />
       <Stepper currentStep={2} />
 
       <main className="flex-1 max-w-4xl w-full mx-auto p-4 md:py-8 flex flex-col gap-6">
         {/* Selection Summary Pill */}
-        <div className="bg-white rounded-2xl p-4 md:p-5 border border-[#DFDDD6] shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <Card className="p-4 md:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
           <div>
-            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
               Jadwal Pilihan Anda
             </span>
-            <span className="text-sm md:text-base font-bold text-[#1C2955]">
+            <span className="text-sm md:text-base font-bold">
               {draft.date ? formatDateIndo(draft.date) : "—"} • {draft.start}–{draft.end} WIB ({draft.guests} Tamu)
             </span>
           </div>
 
-          <Link
-            href="/"
-            className="text-xs font-semibold px-3.5 py-1.5 rounded-lg border border-[#DFDDD6] text-[#1C2955] hover:bg-[#F3F2EF] transition-all"
-          >
-            ← Ubah Waktu
-          </Link>
-        </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/">
+              <ArrowLeft />
+              Ubah Waktu
+            </Link>
+          </Button>
+        </Card>
 
         {/* Heading */}
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-[#1C2955]">
-            2. Pilih Ruangan Pertemuan
-          </h1>
-          <p className="text-xs md:text-sm text-gray-600 mt-1">
+          <h1 className="text-xl md:text-2xl font-bold">2. Pilih Ruangan Pertemuan</h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1">
             Pilih ruangan privat yang sesuai dengan ukuran rombongan dan kebutuhan acara Anda.
           </p>
         </div>
 
         {/* Loading State */}
         {loading && (
-          <div className="py-16 text-center">
-            <div className="inline-block w-8 h-8 border-3 border-[#1C2955]/20 border-t-[#1C2955] rounded-full animate-spin mb-3" />
-            <p className="text-xs text-gray-500 font-medium">Memeriksa ketersediaan ruangan...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5" aria-label="Memeriksa ketersediaan ruangan">
+            {[0, 1].map((i) => (
+              <Card key={i} className="overflow-hidden p-0 gap-0">
+                <Skeleton className="h-44 w-full rounded-none" />
+                <div className="p-5 flex flex-col gap-3">
+                  <Skeleton className="h-5 w-1/2" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-9 w-full" />
+                </div>
+              </Card>
+            ))}
           </div>
         )}
 
         {/* Error State */}
         {!loading && error && (
-          <div className="bg-white rounded-2xl p-6 border border-rose-200 text-center">
-            <p className="text-sm font-semibold text-rose-700 mb-3">⚠️ {error}</p>
-            <Link
-              href="/"
-              className="inline-block px-4 py-2 bg-[#1C2955] text-white text-xs font-bold rounded-lg"
-            >
-              Kembali ke Pilih Jadwal
-            </Link>
-          </div>
+          <Alert variant="destructive" className="bg-white">
+            <AlertTriangle />
+            <AlertTitle>{error}</AlertTitle>
+            <AlertDescription>
+              <Button asChild size="sm" className="mt-2">
+                <Link href="/">Kembali ke Pilih Jadwal</Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Rooms Grid */}
@@ -154,78 +199,96 @@ export default function PilihRuanganPage() {
               const reasonBadge = !room.available ? getReasonBadge(room.reason, room) : null;
 
               return (
-                <div
+                <Card
                   key={room.id}
-                  className={`bg-white rounded-2xl border transition-all flex flex-col justify-between overflow-hidden shadow-xs ${
-                    room.available
-                      ? "border-[#DFDDD6] hover:border-[#1C2955] hover:shadow-md"
-                      : "border-gray-200 bg-gray-50/70 opacity-75"
+                  className={`overflow-hidden p-0 gap-0 justify-between transition-all ${
+                    room.available ? "hover:border-primary hover:shadow-md" : "opacity-75"
                   }`}
                 >
-                  <div className="p-5 md:p-6">
+                  {room.photoUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={room.photoUrl}
+                      alt={`Foto ${room.name}`}
+                      loading="lazy"
+                      className={`w-full h-44 object-cover bg-muted ${room.available ? "" : "grayscale"}`}
+                    />
+                  )}
+                  <div className="p-5 md:p-6 flex-1">
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <div>
-                        <h2 className="text-lg font-bold text-[#1C2955]">{room.name}</h2>
+                        <h2 className="text-lg font-bold">{room.name}</h2>
                         {room.location && (
-                          <span className="text-xs text-gray-500 font-medium">
-                            📍 {room.location}
+                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground font-medium">
+                            <MapPin className="size-3" /> {room.location}
                           </span>
                         )}
                       </div>
 
-                      <span className="text-xs font-semibold px-2.5 py-1 bg-[#F3F2EF] text-[#1C2955] rounded-lg border border-[#DFDDD6] whitespace-nowrap">
-                        👥 {room.minGuests}–{room.maxGuests} orang
-                      </span>
+                      <Badge variant="outline" className="whitespace-nowrap">
+                        <Users /> {room.minGuests}–{room.maxGuests} orang
+                      </Badge>
                     </div>
 
                     {/* Facilities Chips */}
                     {room.facilities && room.facilities.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-3 mb-4">
-                        {room.facilities.map((fac, idx) => (
-                          <span
-                            key={idx}
-                            className="text-[11px] font-medium px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md"
-                          >
-                            ✓ {fac}
-                          </span>
+                        {room.facilities.map((fac) => (
+                          <Badge key={fac} variant="secondary" className="font-medium text-muted-foreground">
+                            <Check /> {fac}
+                          </Badge>
                         ))}
                       </div>
                     )}
 
+                    {/* Jam terisi di tanggal ini (sudah termasuk jeda 30 menit dan blokir) */}
+                    {busyByRoom[room.id] && (
+                      <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground mb-3">
+                        <Clock className="size-3.5 shrink-0 mt-px" />
+                        <span>
+                          <span className="font-bold text-foreground">
+                            Terisi {draft.date ? formatDateIndo(draft.date) : ""}:{" "}
+                          </span>
+                          {busyByRoom[room.id].length > 0
+                            ? `${busyByRoom[room.id].map(formatBusySlot).join(", ")} WIB`
+                            : "Belum ada, semua jam masih kosong"}
+                        </span>
+                      </p>
+                    )}
+
                     {/* Reason Alert for Unavailable Room */}
                     {reasonBadge && (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl mb-4">
-                        <span className="block text-xs font-bold text-amber-800">
-                          {reasonBadge.text}
-                        </span>
-                        <span className="block text-[11px] text-amber-700 mt-0.5">
-                          {reasonBadge.desc}
-                        </span>
-                      </div>
+                      <Alert className="border-amber-200 bg-amber-50 text-amber-800">
+                        <Info />
+                        <AlertTitle>{reasonBadge.text}</AlertTitle>
+                        <AlertDescription className="text-amber-700">{reasonBadge.desc}</AlertDescription>
+                      </Alert>
                     )}
                   </div>
 
                   {/* Room Selection Footer */}
-                  <div className="p-4 bg-gray-50/80 border-t border-[#DFDDD6] flex items-center justify-between">
+                  <div className="p-4 bg-muted/60 border-t flex items-center justify-between">
                     <div>
-                      <span className="block text-[10px] text-gray-400 font-medium">Biaya Sewa</span>
+                      <span className="block text-[10px] text-muted-foreground font-medium">Biaya Sewa</span>
                       <span className="text-xs font-bold text-emerald-700">Gratis (Pre-Order Menu)</span>
                     </div>
 
-                    <button
+                    <Button
                       type="button"
+                      size="lg"
                       disabled={!room.available}
                       onClick={() => handleSelectRoom(room)}
-                      className={`px-5 py-2.5 rounded-xl font-bold text-xs transition-all ${
-                        room.available
-                          ? "bg-[#1C2955] text-white hover:bg-[#1A2751] active:scale-95 shadow-xs"
-                          : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      }`}
                     >
-                      {room.available ? "Pilih Ruangan Ini →" : "Tidak Tersedia"}
-                    </button>
+                      {room.available ? (
+                        <>
+                          Pilih Ruangan Ini <ArrowRight />
+                        </>
+                      ) : (
+                        "Tidak Tersedia"
+                      )}
+                    </Button>
                   </div>
-                </div>
+                </Card>
               );
             })}
           </div>

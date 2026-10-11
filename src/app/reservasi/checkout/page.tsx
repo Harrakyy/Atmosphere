@@ -8,6 +8,28 @@ import { Header } from "@/components/Header";
 import { Stepper } from "@/components/Stepper";
 import { useBookingDraft } from "@/lib/booking-draft";
 import { formatRupiah, formatDateIndo } from "@/lib/format";
+import { createReservationSchema } from "@/contracts";
+import { toast } from "sonner";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CalendarDays,
+  Clock,
+  CreditCard,
+  DoorOpen,
+  Loader2,
+  Lock,
+  NotebookPen,
+  ShieldCheck,
+  Timer,
+  UserRound,
+  UtensilsCrossed,
+} from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 declare global {
   interface Window {
@@ -81,13 +103,13 @@ export default function CheckoutPage() {
     setErrorMsg(null);
     setIsSlotTaken(false);
 
-    // Validasi dasar
-    if (name.trim().length < 2 || name.trim().length > 80) {
-      setErrorMsg("Nama pemesan harus antara 2 dan 80 karakter.");
-      return;
-    }
-    if (!/^08\d{8,11}$|^628\d{8,12}$/.test(phone.replace(/\D/g, ""))) {
-      setErrorMsg("Nomor WhatsApp tidak valid (contoh: 081234567890).");
+    const customerCheck = createReservationSchema.shape.customer.safeParse({
+      name: name.trim(),
+      phone: phone.trim(),
+      email: email.trim(),
+    });
+    if (!customerCheck.success) {
+      setErrorMsg(customerCheck.error.issues[0]?.message ?? "Data pemesan tidak valid.");
       return;
     }
 
@@ -157,10 +179,11 @@ export default function CheckoutPage() {
         },
         onError: (result) => {
           console.error("Snap error:", result);
-          setErrorMsg("Pembayaran gagal atau dibatalkan. Anda dapat mencoba bayar lagi.");
+          toast.error("Pembayaran gagal atau dibatalkan. Anda dapat mencoba bayar lagi.");
         },
         onClose: () => {
           // Tetap di halaman, pengguna bisa menekan tombol Bayar lagi
+          toast.info("Pembayaran belum selesai. Tekan \"Buka Pembayaran\" untuk melanjutkan.");
         },
       });
     } else if (fallbackRedirectUrl) {
@@ -182,213 +205,224 @@ export default function CheckoutPage() {
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
+  const isHolding = Boolean(snapToken && secondsRemaining > 0);
+  const servingLabel = {
+    ON_ARRIVAL: "Saat Tiba di Lokasi",
+    AFTER_30_MIN: "30 Menit Setelah Tiba",
+    CUSTOM: `Pukul ${draft.servingAt} WIB`,
+  }[draft.servingTime];
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#F3F2EF]">
+    <div className="min-h-screen flex flex-col">
       {/* Midtrans Snap Script */}
-      <Script
-        src={snapScriptUrl}
-        data-client-key={clientKey}
-        strategy="lazyOnload"
-      />
+      <Script src={snapScriptUrl} data-client-key={clientKey} strategy="lazyOnload" />
 
       <Header />
       <Stepper currentStep={4} />
 
       <main className="flex-1 max-w-4xl w-full mx-auto p-4 md:py-8 flex flex-col gap-6">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-[#1C2955]">
-            4. Ringkasan & Pembayaran
-          </h1>
-          <p className="text-xs md:text-sm text-gray-600 mt-1">
+          <h1 className="text-xl md:text-2xl font-bold">4. Ringkasan & Pembayaran</h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1">
             Lengkapi data pemesan dan selesaikan pembayaran untuk mengonfirmasi reservasi Anda.
           </p>
         </div>
 
         {errorMsg && (
-          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl text-sm font-medium flex flex-col gap-2">
-            <div>⚠️ {errorMsg}</div>
+          <Alert variant="destructive" className="bg-white">
+            <AlertTriangle />
+            <AlertTitle>{errorMsg}</AlertTitle>
             {isSlotTaken && (
-              <Link
-                href="/reservasi/ruangan"
-                className="inline-block text-xs font-bold text-rose-800 underline mt-1"
-              >
-                ← Kembali dan Pilih Ruangan Lain
-              </Link>
+              <AlertDescription>
+                <Button asChild variant="outline" size="sm" className="mt-2">
+                  <Link href="/reservasi/ruangan">
+                    <ArrowLeft />
+                    Kembali dan Pilih Ruangan Lain
+                  </Link>
+                </Button>
+              </AlertDescription>
             )}
-          </div>
+          </Alert>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Order Details (Left 1.5 Col) */}
+          {/* Order Details */}
           <div className="md:col-span-2 flex flex-col gap-5">
             {/* Form Data Pemesan */}
-            <div className="bg-white p-6 rounded-2xl border border-[#DFDDD6] shadow-xs">
-              <h2 className="text-base font-bold text-[#1C2955] mb-4">
-                Data Pemesan
+            <Card className="p-6">
+              <h2 className="flex items-center gap-2 text-base font-bold">
+                <UserRound className="size-4" /> Data Pemesan
               </h2>
 
               <form onSubmit={handlePay} id="checkout-form" className="flex flex-col gap-4">
-                <div>
-                  <label htmlFor="customer-name" className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                    Nama Lengkap <span className="text-rose-500">*</span>
-                  </label>
-                  <input
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="customer-name" className="text-xs font-bold uppercase text-gray-700">
+                    Nama Lengkap <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
                     id="customer-name"
-                    type="text"
                     required
                     maxLength={80}
+                    autoComplete="name"
                     placeholder="Contoh: Budi Santoso"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    disabled={Boolean(snapToken && secondsRemaining > 0)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#DFDDD6] focus:border-[#1C2955] outline-none text-sm text-[#1C2955] bg-white disabled:bg-gray-100"
+                    disabled={isHolding}
+                    className="h-11 rounded-xl"
                   />
                 </div>
 
-                <div>
-                  <label htmlFor="customer-phone" className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                    Nomor WhatsApp <span className="text-rose-500">*</span>
-                  </label>
-                  <input
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="customer-phone" className="text-xs font-bold uppercase text-gray-700">
+                    Nomor WhatsApp <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
                     id="customer-phone"
                     type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
                     required
                     placeholder="Contoh: 081234567890"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    disabled={Boolean(snapToken && secondsRemaining > 0)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#DFDDD6] focus:border-[#1C2955] outline-none text-sm text-[#1C2955] bg-white disabled:bg-gray-100"
+                    disabled={isHolding}
+                    className="h-11 rounded-xl"
                   />
-                  <span className="block text-[11px] text-gray-500 mt-1">
+                  <span className="text-[11px] text-muted-foreground">
                     E-tiket dan notifikasi akan dikirimkan ke nomor ini
                   </span>
                 </div>
 
-                <div>
-                  <label htmlFor="customer-email" className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="customer-email" className="text-xs font-bold uppercase text-gray-700">
                     Email (Opsional)
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     id="customer-email"
                     type="email"
+                    autoComplete="email"
                     placeholder="Contoh: budi@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    disabled={Boolean(snapToken && secondsRemaining > 0)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#DFDDD6] focus:border-[#1C2955] outline-none text-sm text-[#1C2955] bg-white disabled:bg-gray-100"
+                    disabled={isHolding}
+                    className="h-11 rounded-xl"
                   />
                 </div>
               </form>
-            </div>
+            </Card>
 
             {/* Menu Items Snapshot */}
-            <div className="bg-white p-6 rounded-2xl border border-[#DFDDD6] shadow-xs">
-              <h2 className="text-base font-bold text-[#1C2955] mb-3">
-                Rincian Menu Pre-Order
+            <Card className="p-6 gap-3">
+              <h2 className="flex items-center gap-2 text-base font-bold">
+                <UtensilsCrossed className="size-4" /> Rincian Menu Pre-Order
               </h2>
 
-              <div className="divide-y divide-gray-100 text-xs">
-                {draft.items.map((item, idx) => (
-                  <div key={idx} className="py-2.5 flex items-center justify-between">
+              <div className="divide-y text-xs">
+                {draft.items.map((item) => (
+                  <div key={`${item.productId}-${item.option}`} className="py-2.5 flex items-center justify-between">
                     <div>
-                      <span className="font-bold text-[#1C2955]">
+                      <span className="font-bold">
                         {item.quantity}x {item.productName}
                       </span>
-                      {item.option && (
-                        <span className="text-gray-500 ml-1">({item.option})</span>
-                      )}
+                      {item.option && <span className="text-muted-foreground ml-1">({item.option})</span>}
                     </div>
-                    <span className="font-semibold text-gray-700">
-                      {formatRupiah(item.unitPrice * item.quantity)}
-                    </span>
+                    <span className="font-semibold">{formatRupiah(item.unitPrice * item.quantity)}</span>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           </div>
 
-          {/* Sidebar Summary (Right 1 Col) */}
+          {/* Sidebar Summary */}
           <div className="flex flex-col gap-4">
-            <div className="bg-white p-6 rounded-2xl border border-[#DFDDD6] shadow-xs flex flex-col gap-4">
-              <h3 className="font-bold text-sm text-[#1C2955] border-b border-[#DFDDD6] pb-3">
-                Ringkasan Reservasi
-              </h3>
+            <Card className="p-6 gap-4 md:sticky md:top-20">
+              <h3 className="font-bold text-sm border-b pb-3">Ringkasan Reservasi</h3>
 
-              <div className="text-xs flex flex-col gap-2 text-gray-600">
-                <div>
-                  <span className="font-medium block text-[11px] text-gray-400">Ruangan</span>
-                  <span className="font-bold text-[#1C2955] text-sm">{draft.roomName || "—"}</span>
+              <dl className="text-xs flex flex-col gap-2.5">
+                <div className="flex gap-2">
+                  <DoorOpen className="size-4 text-muted-foreground shrink-0" />
+                  <div>
+                    <dt className="text-[11px] text-muted-foreground">Ruangan</dt>
+                    <dd className="font-bold text-sm">{draft.roomName || "—"}</dd>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-medium block text-[11px] text-gray-400">Jadwal</span>
-                  <span className="font-semibold text-[#1C2955]">
-                    {draft.date ? formatDateIndo(draft.date) : "—"}
-                  </span>
-                  <span className="block text-gray-500">
-                    {draft.start} – {draft.end} WIB ({draft.guests} orang)
-                  </span>
+                <div className="flex gap-2">
+                  <CalendarDays className="size-4 text-muted-foreground shrink-0" />
+                  <div>
+                    <dt className="text-[11px] text-muted-foreground">Jadwal</dt>
+                    <dd className="font-semibold">{draft.date ? formatDateIndo(draft.date) : "—"}</dd>
+                    <dd className="text-muted-foreground">
+                      {draft.start} – {draft.end} WIB ({draft.guests} orang)
+                    </dd>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-medium block text-[11px] text-gray-400">Waktu Penyajian</span>
-                  <span className="font-medium text-[#1C2955]">
-                    {draft.servingTime === "ON_ARRIVAL" && "Saat Tiba di Lokasi"}
-                    {draft.servingTime === "AFTER_30_MIN" && "30 Menit Setelah Tiba"}
-                    {draft.servingTime === "CUSTOM" && `Pukul ${draft.servingAt} WIB`}
-                  </span>
+                <div className="flex gap-2">
+                  <Clock className="size-4 text-muted-foreground shrink-0" />
+                  <div>
+                    <dt className="text-[11px] text-muted-foreground">Waktu Penyajian</dt>
+                    <dd className="font-medium">{servingLabel}</dd>
+                  </div>
                 </div>
                 {draft.kitchenNote && (
-                  <div>
-                    <span className="font-medium block text-[11px] text-gray-400">Catatan Dapur</span>
-                    <span className="italic text-gray-500">&quot;{draft.kitchenNote}&quot;</span>
+                  <div className="flex gap-2">
+                    <NotebookPen className="size-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <dt className="text-[11px] text-muted-foreground">Catatan Dapur</dt>
+                      <dd className="italic text-muted-foreground">&quot;{draft.kitchenNote}&quot;</dd>
+                    </div>
                   </div>
                 )}
-              </div>
+              </dl>
 
               {/* Hold Timer Alert (if snap session created) */}
               {snapToken && holdExpiresAt && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-center">
-                  <span className="block text-[11px] font-bold text-amber-800 uppercase tracking-wider">
-                    Batas Waktu Pembayaran
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-center" aria-live="polite">
+                  <span className="flex items-center justify-center gap-1 text-[11px] font-bold text-amber-800 uppercase tracking-wider">
+                    <Timer className="size-3.5" /> Batas Waktu Pembayaran
                   </span>
                   <span className="block text-xl font-mono font-extrabold text-amber-900 mt-0.5">
                     {secondsRemaining > 0 ? formatTimer(secondsRemaining) : "Kedaluwarsa"}
                   </span>
-                  <span className="block text-[10px] text-amber-700 mt-1">
-                    Slot ditahan hingga waktu habis
-                  </span>
+                  <span className="block text-[10px] text-amber-700 mt-1">Slot ditahan hingga waktu habis</span>
                 </div>
               )}
 
               {/* Total & Action Button */}
-              <div className="pt-4 border-t border-[#DFDDD6]">
+              <div className="pt-4 border-t">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs text-gray-500 font-medium">Total Pembayaran</span>
-                  <span className="text-xl font-extrabold text-[#1C2955]">
-                    {formatRupiah(totalAmount)}
-                  </span>
+                  <span className="text-xs text-muted-foreground font-medium">Total Pembayaran</span>
+                  <span className="text-xl font-extrabold">{formatRupiah(totalAmount)}</span>
                 </div>
 
                 {!snapToken ? (
-                  <button
-                    type="submit"
-                    form="checkout-form"
-                    disabled={loading}
-                    className="w-full py-3.5 bg-[#D81B60] hover:bg-[#B5164F] text-white font-bold text-sm rounded-xl shadow-sm active:scale-98 transition-all flex items-center justify-center gap-2"
-                  >
-                    {loading ? "Memproses..." : "Bayar Sekarang →"}
-                  </button>
+                  <Button type="submit" form="checkout-form" variant="brand" size="xl" className="w-full" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="animate-spin" /> Memproses...
+                      </>
+                    ) : (
+                      <>
+                        <Lock /> Bayar Sekarang
+                      </>
+                    )}
+                  </Button>
                 ) : (
-                  <button
+                  <Button
                     type="button"
+                    size="xl"
+                    className="w-full"
                     disabled={secondsRemaining <= 0}
                     onClick={() => ticketToken && triggerSnapPayment(snapToken, ticketToken)}
-                    className="w-full py-3.5 bg-[#1C2955] hover:bg-[#1A2751] text-white font-bold text-sm rounded-xl shadow-sm active:scale-98 transition-all"
                   >
-                    {secondsRemaining > 0 ? "Buka Pembayaran Snap 💳" : "Waktu Habis"}
-                  </button>
+                    <CreditCard />
+                    {secondsRemaining > 0 ? "Buka Pembayaran" : "Waktu Habis"}
+                  </Button>
                 )}
+                <p className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground mt-2">
+                  <ShieldCheck className="size-3" /> Pembayaran aman via Midtrans (QRIS, e-wallet, VA)
+                </p>
               </div>
-            </div>
+            </Card>
           </div>
         </div>
       </main>

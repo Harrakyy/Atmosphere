@@ -1,10 +1,10 @@
 import { prisma } from "../db";
 import { PaymentGateway } from "../payments/gateway";
-import { fakeGateway } from "../payments/fake";
+import { getPaymentGateway } from "../payments/notification";
 import { validateSchedule } from "../time-rules";
 import { validateCart, CartItemInput, ProductWithCategory } from "../cart";
 import { normalizePhone } from "../phone";
-import { generateCode, generateTicketToken } from "../codes";
+import { generateCode, generateTicketToken, toOrderId } from "../codes";
 import { enabledPayments } from "../pricing";
 import {
   AppError,
@@ -13,9 +13,10 @@ import {
   CartRuleError,
   RoomUnavailableError,
   PaymentGatewayError,
+  CodeCollisionError,
 } from "../http";
 import { wibDateTime } from "../time";
-import { ServingTime, Reservation } from "@prisma/client";
+import { ServingTime, Reservation, Prisma } from "@prisma/client";
 
 export interface CreateReservationInput {
   roomId: string;
@@ -52,7 +53,7 @@ export async function createReservation(
   } = {}
 ): Promise<CreateReservationResult> {
   const db = deps.db ?? prisma;
-  const gateway = deps.gateway ?? fakeGateway;
+  const gateway = deps.gateway ?? getPaymentGateway();
   const now = deps.now ?? new Date();
 
   // 1. Validasi Input Customer (R-D1 - R-D5)
@@ -199,13 +200,13 @@ export async function createReservation(
         );
       }
 
-      // Generate unique code & ticketToken
-      let code = generateCode();
-      for (let attempt = 0; attempt < 5; attempt++) {
-        const existingCode = await tx.reservation.findUnique({ where: { code } });
-        if (!existingCode) break;
-        code = generateCode();
+      // Generate unique code & ticketToken: semua percobaan dicek, tidak ada kode yang dipakai tanpa dicek
+      let code = "";
+      for (let attempt = 0; attempt < 5 && !code; attempt++) {
+        const candidate = generateCode();
+        if (!(await tx.reservation.findUnique({ where: { code: candidate } }))) code = candidate;
       }
+      if (!code) throw new CodeCollisionError();
 
       const ticketToken = generateTicketToken();
 
@@ -260,6 +261,10 @@ export async function createReservation(
   } catch (err: unknown) {
     if (err instanceof AppError) throw err;
     const msg = err instanceof Error ? err.message : "";
+    // Dua request bersamaan memilih kode yang sama di antara pengecekan dan insert
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      throw new CodeCollisionError();
+    }
     // Tangkap exclusion constraint violation (Postgres error 23P01)
     if (msg.includes("23P01") || msg.includes("reservation_no_overlap")) {
       throw new SlotTakenError();
@@ -286,7 +291,7 @@ export async function createReservation(
 
     const paymentMethods = enabledPayments(cart.totalAmount, setting ?? {});
     const payment = await gateway.createPayment({
-      orderId: createdReservation.code,
+      orderId: toOrderId(createdReservation.code),
       amount: cart.totalAmount,
       items: paymentItems,
       customer: {

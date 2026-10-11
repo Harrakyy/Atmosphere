@@ -24,7 +24,7 @@ export async function getTicketByToken(
   }
 
   const setting = await db.setting.findUnique({ where: { id: 1 } });
-  const cafeWhatsapp = setting?.cafeWhatsapp || "6281234567890";
+  const cafeWhatsapp = setting?.cafeWhatsapp ?? "";
 
   // Check lazy expiry for pending payment
   const isExpired =
@@ -83,7 +83,6 @@ export async function getTicketByToken(
     holdExpiresAt: reservation.holdExpiresAt,
     snapToken,
     snapRedirectUrl: effectiveStatus === "PENDING_PAYMENT" ? reservation.snapRedirectUrl : null,
-    checkInUrl: `${appUrl}/admin/check-in/${reservation.code}`,
     wa: {
       saveLink,
       contactCafeLink: contactLink,
@@ -219,9 +218,8 @@ export async function getNeedsActionReservations(
           { status: "CONFIRMED" },
           { status: "PENDING_PAYMENT", holdExpiresAt: { gt: now } },
         ],
-        startAt: { gte: now },
+        startAt: { gte: now, ...(block.endAt ? { lt: block.endAt } : {}) },
         blockEndAt: { gt: block.startAt },
-        ...(block.endAt ? { startAt: { lt: block.endAt } } : {}),
       },
       include: { room: true },
     });

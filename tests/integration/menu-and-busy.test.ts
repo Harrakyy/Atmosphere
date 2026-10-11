@@ -14,6 +14,7 @@ describe("Menu and Day Busy Integration Tests", () => {
     await prisma.product.deleteMany();
     await prisma.category.deleteMany();
     await prisma.room.deleteMany();
+    await prisma.setting.deleteMany();
     await seed(prisma);
   });
 
@@ -28,7 +29,7 @@ describe("Menu and Day Busy Integration Tests", () => {
   });
 
   it("getDayBusy returns busy blocks including reservations and room blocks", async () => {
-    const room = await prisma.room.findFirst({ where: { slug: "the-loft" } });
+    const room = await prisma.room.findFirst({ where: { slug: "ruangan-1" } });
     const roomId = room!.id;
 
     const startAt = wibDateTime("2026-10-18", "10:00");

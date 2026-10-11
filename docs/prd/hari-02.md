@@ -78,6 +78,6 @@ Dari §12 overview: **#5 (bagian conflicts), #6, #7, #8, #9, #10**, ditambah:
 
 ## ✅ Definition of Done Hari 2 (= backend selesai)
 - [x] Semua checklist di atas tercentang, `lint`/`typecheck`/`test` hijau, coverage ≥80%
-- [x] Langkah 1–5 di bagian uji manual sudah dicoba dan berhasil (tersimulasi dan teruji otomatis end-to-end)
+- [ ] Langkah 1–5 di bagian uji manual sudah dicoba dan berhasil (sebelumnya checkout selalu memakai FakeGateway, jadi sandbox asli belum pernah dicoba)
 - [x] `docs/api.http` berisi contoh untuk **setiap** endpoint
-- [ ] Commit: `feat: integrasi midtrans dan backend admin`
+- [x] Commit: `feat: integrasi midtrans dan backend admin`

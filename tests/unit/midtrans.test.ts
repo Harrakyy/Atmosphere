@@ -182,5 +182,15 @@ describe("MidtransGateway", () => {
       const res3 = await gateway.verifyNotification(webhookPayload);
       expect(res3.valid && res3.status).toBe("FAILED");
     });
+
+    it("throws (not invalid signature) when status API fails, so Midtrans retries", async () => {
+      const payload = { order_id: "ATM-X", status_code: "200", gross_amount: "1000.00" };
+      const signature_key = crypto
+        .createHash("sha512")
+        .update(payload.order_id + payload.status_code + payload.gross_amount + serverKey)
+        .digest("hex");
+      global.fetch = vi.fn().mockResolvedValueOnce({ ok: false, status: 503 });
+      await expect(gateway.verifyNotification({ ...payload, signature_key })).rejects.toThrow("503");
+    });
   });
 });

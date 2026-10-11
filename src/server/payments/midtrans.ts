@@ -120,7 +120,8 @@ export class MidtransGateway implements PaymentGateway {
     });
 
     if (!statusRes.ok) {
-      return { valid: false };
+      // Signature sudah valid; gagal cek status → 500 supaya Midtrans mengirim ulang, bukan 401
+      throw new Error(`Midtrans status check failed (${statusRes.status})`);
     }
 
     const statusData = (await statusRes.json()) as Record<string, unknown>;

@@ -1,4 +1,14 @@
 import { z } from "zod";
+import { normalizePhone } from "@/server/phone";
+
+const isValidPhone = (v: string) => {
+  try {
+    normalizePhone(v);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 export const availabilityQuerySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD"),
@@ -32,7 +42,7 @@ export const createReservationSchema = z.object({
   kitchenNote: z.string().max(300, "Catatan dapur maksimal 300 karakter").nullable().optional(),
   customer: z.object({
     name: z.string().min(2, "Nama minimal 2 karakter").max(80, "Nama maksimal 80 karakter"),
-    phone: z.string().min(5, "Nomor WhatsApp wajib diisi"),
+    phone: z.string().refine(isValidPhone, "Nomor WhatsApp tidak valid (contoh: 081234567890)."),
     email: z
       .string()
       .email("Format email tidak valid")
@@ -53,6 +63,9 @@ export const adminCancelSchema = z.object({
   by: z.enum(["CAFE", "CUSTOMER"]),
   reason: z.string().min(1, "Alasan pembatalan wajib diisi"),
   refundAmount: z.number().int().min(0, "Nominal refund tidak boleh negatif").optional(),
+}).refine((d) => d.by !== "CUSTOMER" || d.refundAmount !== undefined, {
+  message: "Nominal refund wajib diisi untuk pembatalan atas permintaan customer",
+  path: ["refundAmount"],
 });
 
 export const adminRefundDoneSchema = z.object({
@@ -110,8 +123,9 @@ export const adminUpdateRoomSchema = z
 
 export const adminCreateBlockSchema = z
   .object({
-    startAt: z.string().min(1, "Waktu mulai blokir wajib diisi"),
-    endAt: z.string().nullable().optional(),
+    // Wajib ISO dengan offset, supaya tidak ditafsirkan memakai zona waktu server
+    startAt: z.iso.datetime({ offset: true, error: "Waktu mulai blokir harus ISO dengan zona waktu" }),
+    endAt: z.iso.datetime({ offset: true }).nullable().optional(),
     reason: z.string().min(1, "Alasan blokir wajib diisi"),
   })
   .refine(
@@ -158,50 +172,25 @@ export const adminProductSchema = z.object({
 
 export const adminUpdateProductSchema = adminProductSchema.partial();
 
-export const adminUpdateSettingSchema = z
-  .object({
-    markupBps: z.number().int().min(0, "Markup minimal 0 bps").max(2000, "Markup maksimal 2000 bps").optional(),
-    roundingUnit: z.number().int().positive().optional(),
-    vaMinTotal: z.number().int().min(0).optional(),
-    openTime: z.string().regex(/^\d{2}:\d{2}$/, "Format jam harus HH:mm").optional(),
-    closeTime: z.string().regex(/^\d{2}:\d{2}$/, "Format jam harus HH:mm").optional(),
-    slotStepMinutes: z.number().int().positive().optional(),
-    minDurationMinutes: z.number().int().positive().optional(),
-    maxDurationMinutes: z.number().int().positive().optional(),
-    bufferMinutes: z.number().int().min(0).optional(),
-    leadDays: z.number().int().min(0).optional(),
-    leadCutoffTime: z.string().regex(/^\d{2}:\d{2}$/, "Format jam harus HH:mm").optional(),
-    maxAdvanceDays: z.number().int().positive().optional(),
-    holdMinutes: z.number().int().positive().optional(),
-    paymentExpiryMinutes: z.number().int().positive().optional(),
-    cafeWhatsapp: z
-      .string()
-      .regex(/^62\d+$/, "Nomor WhatsApp harus berformat 62...")
-      .optional()
-      .or(z.literal("")),
-  })
-  .refine(
-    (data) => {
-      if (data.openTime && data.closeTime) {
-        return data.openTime < data.closeTime;
-      }
-      return true;
-    },
-    {
-      message: "Jam buka (openTime) harus lebih awal dari jam tutup (closeTime)",
-      path: ["openTime"],
-    }
-  )
-  .refine(
-    (data) => {
-      if (data.paymentExpiryMinutes !== undefined && data.holdMinutes !== undefined) {
-        return data.paymentExpiryMinutes < data.holdMinutes;
-      }
-      return true;
-    },
-    {
-      message: "Waktu kedaluwarsa pembayaran (paymentExpiryMinutes) harus lebih kecil dari waktu hold (holdMinutes)",
-      path: ["paymentExpiryMinutes"],
-    }
-  );
+export const adminUpdateSettingSchema = z.object({
+  markupBps: z.number().int().min(0, "Markup minimal 0 bps").max(2000, "Markup maksimal 2000 bps").optional(),
+  roundingUnit: z.number().int().positive().optional(),
+  vaMinTotal: z.number().int().min(0).optional(),
+  openTime: z.string().regex(/^\d{2}:\d{2}$/, "Format jam harus HH:mm").optional(),
+  closeTime: z.string().regex(/^\d{2}:\d{2}$/, "Format jam harus HH:mm").optional(),
+  slotStepMinutes: z.number().int().positive().optional(),
+  minDurationMinutes: z.number().int().positive().optional(),
+  maxDurationMinutes: z.number().int().positive().optional(),
+  bufferMinutes: z.number().int().min(0).optional(),
+  leadDays: z.number().int().min(0).optional(),
+  leadCutoffTime: z.string().regex(/^\d{2}:\d{2}$/, "Format jam harus HH:mm").optional(),
+  maxAdvanceDays: z.number().int().positive().optional(),
+  holdMinutes: z.number().int().positive().optional(),
+  paymentExpiryMinutes: z.number().int().positive().optional(),
+  cafeWhatsapp: z
+    .string()
+    .regex(/^628\d{7,12}$/, "Nomor WhatsApp harus berformat 628... (R-D2)")
+    .optional()
+    .or(z.literal("")),
+});
 

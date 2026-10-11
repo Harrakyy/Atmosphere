@@ -4,6 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatRupiah, formatDateIndo, formatTimeRange, getStatusInfo } from "@/lib/format";
+import { AlertTriangle, ArrowRight, CalendarX, LogIn, RefreshCw } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ReservationListItem {
   id: string;
@@ -34,6 +42,7 @@ function toTodayWibString(): string {
 
 export default function AdminReservasiListPage() {
   const router = useRouter();
+  const [checkInCode, setCheckInCode] = useState("");
   const [date, setDate] = useState<string>("");
   const [isAllDates, setIsAllDates] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -108,20 +117,54 @@ export default function AdminReservasiListPage() {
           </p>
         </div>
 
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={fetchReservations}
-          className="text-xs font-semibold px-3 py-2 bg-white border border-[#DFDDD6] rounded-xl hover:bg-gray-50 text-[#1C2955] transition-all self-start sm:self-auto"
+          disabled={loading}
+          className="self-start sm:self-auto bg-white"
         >
-          🔄 Muat Ulang
-        </button>
+          <RefreshCw className={loading ? "animate-spin" : ""} />
+          Muat Ulang
+        </Button>
       </div>
+
+      {/* Check-in manual: kasir mengetik kode 4 karakter dari tamu */}
+      <Card className="p-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (checkInCode.length === 4) router.push(`/admin/check-in/${checkInCode}`);
+          }}
+          className="flex flex-col sm:flex-row sm:items-end gap-3"
+        >
+          <div className="flex-1">
+            <label htmlFor="checkin-code" className="block text-xs font-bold text-gray-700 uppercase mb-1.5">
+              Check-in: masukkan kode tamu
+            </label>
+            <Input
+              id="checkin-code"
+              value={checkInCode}
+              onChange={(e) => setCheckInCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+              maxLength={4}
+              autoComplete="off"
+              autoCapitalize="characters"
+              placeholder="Contoh: 7K2F"
+              aria-label="Kode booking"
+              className="h-11 rounded-xl font-mono text-lg font-bold tracking-[0.3em]"
+            />
+          </div>
+          <Button type="submit" size="xl" disabled={checkInCode.length < 4}>
+            <LogIn /> Check-in
+          </Button>
+        </form>
+      </Card>
 
       {/* Needs Action Banner Card (R-B3) */}
       {needsActionList.length > 0 && (
         <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 shadow-xs">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-base">⚠️</span>
+            <AlertTriangle className="size-4 text-amber-700" />
             <h2 className="text-sm font-bold text-amber-900">
               Perlu Tindakan Admin ({needsActionList.length} Reservasi)
             </h2>
@@ -150,8 +193,8 @@ export default function AdminReservasiListPage() {
                     {formatDateIndo(item.startAt)} ({formatTimeRange(item.startAt, item.endAt)})
                   </div>
                 </div>
-                <span className="text-right text-[#D81B60] font-bold text-[11px] mt-2">
-                  Tindak Lanjuti →
+                <span className="inline-flex items-center justify-end gap-1 text-brand font-bold text-[11px] mt-2">
+                  Tindak Lanjuti <ArrowRight className="size-3" />
                 </span>
               </Link>
             ))}
@@ -189,39 +232,42 @@ export default function AdminReservasiListPage() {
         {/* Status Selector */}
         <div className="flex items-center gap-2">
           <label htmlFor="filter-status" className="text-xs font-bold text-gray-600">Status:</label>
-          <select
-            id="filter-status"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-xl border border-[#DFDDD6] outline-none text-[#1C2955] font-semibold bg-white"
-          >
-            <option value="ALL">Semua Status</option>
-            <option value="CONFIRMED">CONFIRMED (Terkonfirmasi)</option>
-            <option value="CHECKED_IN">CHECKED_IN (Sedang Berlangsung)</option>
-            <option value="PENDING_PAYMENT">PENDING_PAYMENT (Menunggu Bayar)</option>
-            <option value="COMPLETED">COMPLETED (Selesai)</option>
-            <option value="CANCELLED">CANCELLED (Dibatalkan)</option>
-            <option value="EXPIRED">EXPIRED (Kedaluwarsa)</option>
-            <option value="NO_SHOW">NO_SHOW (Tidak Hadir)</option>
-          </select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger id="filter-status" size="sm" className="font-semibold">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+            <SelectItem value="ALL">Semua Status</SelectItem>
+            <SelectItem value="CONFIRMED">CONFIRMED (Terkonfirmasi)</SelectItem>
+            <SelectItem value="CHECKED_IN">CHECKED_IN (Sedang Berlangsung)</SelectItem>
+            <SelectItem value="PENDING_PAYMENT">PENDING_PAYMENT (Menunggu Bayar)</SelectItem>
+            <SelectItem value="COMPLETED">COMPLETED (Selesai)</SelectItem>
+            <SelectItem value="CANCELLED">CANCELLED (Dibatalkan)</SelectItem>
+            <SelectItem value="EXPIRED">EXPIRED (Kedaluwarsa)</SelectItem>
+            <SelectItem value="NO_SHOW">NO_SHOW (Tidak Hadir)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {errorMsg && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl">
-          ⚠️ {errorMsg}
-        </div>
+        <Alert variant="destructive" className="bg-white">
+          <AlertTriangle />
+          <AlertDescription>{errorMsg}</AlertDescription>
+        </Alert>
       )}
 
       {/* Table Container */}
       <div className="bg-white rounded-2xl border border-[#DFDDD6] shadow-xs overflow-hidden">
         {loading ? (
-          <div className="py-20 text-center">
-            <div className="inline-block w-8 h-8 border-3 border-[#1C2955]/20 border-t-[#1C2955] rounded-full animate-spin mb-3" />
-            <p className="text-xs text-gray-500 font-medium">Memuat data reservasi...</p>
+          <div className="p-4 flex flex-col gap-3" aria-label="Memuat data reservasi">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
           </div>
         ) : reservations.length === 0 ? (
-          <div className="py-16 text-center text-gray-400 text-sm">
+          <div className="py-16 flex flex-col items-center gap-2 text-center text-muted-foreground text-sm">
+            <CalendarX className="size-8 opacity-50" />
             Tidak ada reservasi yang ditemukan untuk kriteria filter ini.
           </div>
         ) : (
@@ -268,19 +314,14 @@ export default function AdminReservasiListPage() {
                         {formatRupiah(res.totalAmount)}
                       </td>
                       <td className="py-3.5 px-4">
-                        <span
-                          className={`inline-block px-2.5 py-1 rounded-md text-[11px] font-bold ${s.bg} ${s.text}`}
-                        >
-                          {s.label}
-                        </span>
+                        <Badge className={`${s.bg} ${s.text}`}>{s.label}</Badge>
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        <Link
-                          href={`/admin/reservasi/${res.id}`}
-                          className="px-3 py-1.5 bg-[#1C2955] text-white font-bold text-xs rounded-lg hover:bg-[#1A2751] transition-all inline-block"
-                        >
-                          Detail →
-                        </Link>
+                        <Button asChild size="sm">
+                          <Link href={`/admin/reservasi/${res.id}`}>
+                            Detail <ArrowRight />
+                          </Link>
+                        </Button>
                       </td>
                     </tr>
                   );

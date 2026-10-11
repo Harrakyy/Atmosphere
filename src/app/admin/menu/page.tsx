@@ -3,6 +3,18 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { formatRupiah } from "@/lib/format";
+import { toast } from "sonner";
+import { AlertTriangle, CheckCircle2, Loader2, Plus } from "lucide-react";
+import { useConfirm } from "@/components/useConfirm";
+import { OptionsEditor } from "@/components/OptionsEditor";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 
 interface AdminCategory {
   id: string;
@@ -36,6 +48,7 @@ interface AdminProduct {
 
 export default function AdminMenuPage() {
   const router = useRouter();
+  const { askConfirm, confirmDialog } = useConfirm();
   const [activeTab, setActiveTab] = useState<"PRODUCTS" | "CATEGORIES">("PRODUCTS");
 
   const [products, setProducts] = useState<AdminProduct[]>([]);
@@ -51,7 +64,7 @@ export default function AdminMenuPage() {
   const [prodCategoryId, setProdCategoryId] = useState("");
   const [prodBasePrice, setProdBasePrice] = useState(25000);
   const [prodDescription, setProdDescription] = useState("");
-  const [prodOptionsStr, setProdOptionsStr] = useState("");
+  const [prodOptions, setProdOptions] = useState<string[]>([]);
   const [prodLabel, setProdLabel] = useState("");
   const [prodIsAvailable, setProdIsAvailable] = useState(true);
   const [prodPhotoUrl, setProdPhotoUrl] = useState("");
@@ -119,7 +132,7 @@ export default function AdminMenuPage() {
 
       setProdPhotoUrl(json.data.url);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Gagal mengunggah foto.");
+      toast.error(err instanceof Error ? err.message : "Gagal mengunggah foto.");
     } finally {
       setUploadingImage(false);
     }
@@ -131,17 +144,12 @@ export default function AdminMenuPage() {
     setErrorMsg(null);
 
     try {
-      const optionsArray = prodOptionsStr
-        .split(",")
-        .map((o) => o.trim())
-        .filter(Boolean);
-
       const payload = {
         name: prodName.trim(),
         categoryId: prodCategoryId,
         basePrice: Number(prodBasePrice),
         description: prodDescription.trim() || undefined,
-        options: optionsArray,
+        options: prodOptions,
         label: prodLabel.trim() || null,
         photoUrl: prodPhotoUrl.trim() || null,
         isAvailable: prodIsAvailable,
@@ -163,6 +171,7 @@ export default function AdminMenuPage() {
 
       setShowProductModal(false);
       setEditingProductId(null);
+      toast.success("Produk disimpan.");
       await fetchData();
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Gagal menyimpan produk.");
@@ -172,12 +181,18 @@ export default function AdminMenuPage() {
   };
 
   const handleArchiveProduct = async (productId: string) => {
-    if (!confirm("Arsipkan produk ini?")) return;
+    if (!(await askConfirm("Arsipkan produk ini?", "Produk tidak akan tampil lagi di menu customer."))) return;
     try {
-      await fetch(`/api/admin/products/${productId}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/products/${productId}`, { method: "DELETE" });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        toast.error(json.error?.message || "Gagal mengarsipkan produk.");
+        return;
+      }
+      toast.success("Produk diarsipkan.");
       await fetchData();
     } catch {
-      // ignore
+      toast.error("Gagal mengarsipkan produk. Periksa koneksi lalu coba lagi.");
     }
   };
 
@@ -208,6 +223,7 @@ export default function AdminMenuPage() {
 
       setShowCategoryModal(false);
       setEditingCategoryId(null);
+      toast.success("Kategori disimpan.");
       await fetchData();
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Gagal menyimpan kategori.");
@@ -217,22 +233,23 @@ export default function AdminMenuPage() {
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm("Hapus kategori ini? (Hanya bisa dihapus jika tidak ada produk)")) return;
+    if (!(await askConfirm("Hapus kategori ini?", "Hanya bisa dihapus jika kategori tidak berisi produk."))) return;
     try {
       const res = await fetch(`/api/admin/categories/${categoryId}`, { method: "DELETE" });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        alert(json.error?.message || "Kategori tidak dapat dihapus karena masih berisi produk.");
+        toast.error(json.error?.message || "Kategori tidak dapat dihapus karena masih berisi produk.");
         return;
       }
       await fetchData();
     } catch {
-      // ignore
+      toast.error("Gagal menghapus kategori. Periksa koneksi lalu coba lagi.");
     }
   };
 
   return (
     <div className="flex flex-col gap-6">
+      {confirmDialog}
       {/* Top Header & Tab Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -253,15 +270,15 @@ export default function AdminMenuPage() {
                 setProdName("");
                 setProdBasePrice(25000);
                 setProdDescription("");
-                setProdOptionsStr("");
+                setProdOptions([]);
                 setProdLabel("");
                 setProdPhotoUrl("");
                 setProdIsAvailable(true);
                 setShowProductModal(true);
               }}
-              className="px-4 py-2 bg-[#1C2955] text-white text-xs font-bold rounded-xl shadow-xs hover:bg-[#1A2751]"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl shadow-xs hover:bg-primary/85"
             >
-              + Tambah Menu
+              <Plus className="size-3.5" /> Tambah Menu
             </button>
           ) : (
             <button
@@ -272,18 +289,19 @@ export default function AdminMenuPage() {
                 setCatKind("FOOD");
                 setShowCategoryModal(true);
               }}
-              className="px-4 py-2 bg-[#1C2955] text-white text-xs font-bold rounded-xl shadow-xs hover:bg-[#1A2751]"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl shadow-xs hover:bg-primary/85"
             >
-              + Tambah Kategori
+              <Plus className="size-3.5" /> Tambah Kategori
             </button>
           )}
         </div>
       </div>
 
       {errorMsg && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl">
-          ⚠️ {errorMsg}
-        </div>
+        <Alert variant="destructive" className="bg-white">
+          <AlertTriangle />
+          <AlertDescription>{errorMsg}</AlertDescription>
+        </Alert>
       )}
 
       {/* Tabs Switcher */}
@@ -314,7 +332,11 @@ export default function AdminMenuPage() {
 
       {/* Tabs Content */}
       {loading ? (
-        <div className="py-12 text-center text-xs text-gray-400">Memuat data menu...</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" aria-label="Memuat data menu">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-64 rounded-3xl" />
+          ))}
+        </div>
       ) : activeTab === "PRODUCTS" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {products.map((p) => (
@@ -325,6 +347,15 @@ export default function AdminMenuPage() {
               }`}
             >
               <div>
+                {p.photoUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={p.photoUrl}
+                    alt={p.name}
+                    loading="lazy"
+                    className="w-full h-32 object-cover rounded-2xl mb-3 bg-gray-100"
+                  />
+                )}
                 <div className="flex items-start justify-between gap-2 mb-1">
                   <div>
                     <h3 className="font-bold text-sm text-[#1C2955]">{p.name}</h3>
@@ -382,7 +413,7 @@ export default function AdminMenuPage() {
                       setProdCategoryId(p.categoryId);
                       setProdBasePrice(p.basePrice);
                       setProdDescription(p.description || "");
-                      setProdOptionsStr(p.options.join(", "));
+                      setProdOptions(p.options);
                       setProdLabel(p.label || "");
                       setProdPhotoUrl(p.photoUrl || "");
                       setProdIsAvailable(p.isAvailable);
@@ -458,186 +489,173 @@ export default function AdminMenuPage() {
       )}
 
       {/* MODAL: Tambah/Edit Produk */}
-      {showProductModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-lg border border-[#DFDDD6] max-h-[90vh] overflow-y-auto">
-            <h3 className="text-base font-bold text-[#1C2955] mb-4">
-              {editingProductId ? "Edit Produk" : "Tambah Produk Baru"}
-            </h3>
+      <Dialog open={showProductModal} onOpenChange={setShowProductModal}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingProductId ? "Edit Produk" : "Tambah Produk Baru"}</DialogTitle>
+            <DialogDescription>Harga online dihitung otomatis dari harga kasir + markup.</DialogDescription>
+          </DialogHeader>
 
-            <form onSubmit={handleSaveProduct} className="flex flex-col gap-3 text-xs">
-              <div>
-                <label className="font-bold text-gray-600 block mb-1">Nama Produk</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: Kopi Susu Aren"
-                  value={prodName}
-                  onChange={(e) => setProdName(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-[#DFDDD6]"
-                />
-              </div>
+          <form onSubmit={handleSaveProduct} className="flex flex-col gap-3 text-xs">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prod-name" className="text-xs font-bold text-gray-600">Nama Produk</Label>
+              <Input
+                id="prod-name"
+                required
+                placeholder="Contoh: Kopi Susu Aren"
+                value={prodName}
+                onChange={(e) => setProdName(e.target.value)}
+              />
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-gray-600 block mb-1">Kategori</label>
-                  <select
-                    value={prodCategoryId}
-                    onChange={(e) => setProdCategoryId(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-[#DFDDD6]"
-                  >
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="prod-category" className="text-xs font-bold text-gray-600">Kategori</Label>
+                <Select value={prodCategoryId} onValueChange={setProdCategoryId}>
+                  <SelectTrigger id="prod-category" className="w-full">
+                    <SelectValue placeholder="Pilih kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
                     {categories.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
                     ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="font-bold text-gray-600 block mb-1">Harga Kasir (Base Price)</label>
-                  <input
-                    type="number"
-                    min={500}
-                    max={10000000}
-                    required
-                    value={prodBasePrice}
-                    onChange={(e) => setProdBasePrice(Number(e.target.value))}
-                    className="w-full p-2.5 rounded-xl border border-[#DFDDD6]"
-                  />
-                </div>
+                  </SelectContent>
+                </Select>
               </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="prod-price" className="text-xs font-bold text-gray-600">Harga Kasir</Label>
+                <Input
+                  id="prod-price"
+                  type="number"
+                  min={500}
+                  max={10000000}
+                  required
+                  value={prodBasePrice}
+                  onChange={(e) => setProdBasePrice(Number(e.target.value))}
+                />
+              </div>
+            </div>
 
-              <div>
-                <label className="font-bold text-gray-600 block mb-1">Pilihan / Varian (Pisahkan koma)</label>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-bold text-gray-600">Pilihan / Varian (kosongkan kalau tidak ada)</Label>
+              <OptionsEditor value={prodOptions} onChange={setProdOptions} />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prod-desc" className="text-xs font-bold text-gray-600">Deskripsi Singkat</Label>
+              <Textarea
+                id="prod-desc"
+                rows={2}
+                value={prodDescription}
+                onChange={(e) => setProdDescription(e.target.value)}
+              />
+            </div>
+
+            {/* Upload Foto */}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prod-photo" className="text-xs font-bold text-gray-600">Foto Menu</Label>
+              <Input
+                id="prod-photo"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleImageUpload}
+              />
+              {uploadingImage && (
+                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <Loader2 className="size-3 animate-spin" /> Mengunggah foto...
+                </span>
+              )}
+              {prodPhotoUrl && (
+                <span className="flex items-center gap-1 text-[11px] text-emerald-700">
+                  <CheckCircle2 className="size-3" /> Foto terlampir
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="prod-label" className="text-xs font-bold text-gray-600">Label Promosi (Opsional)</Label>
+                <Input
+                  id="prod-label"
+                  placeholder="Best Seller / Chef Special"
+                  value={prodLabel}
+                  onChange={(e) => setProdLabel(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2 pt-5">
                 <input
-                  type="text"
-                  placeholder="Contoh: Hot, Ice (atau kosongkan)"
-                  value={prodOptionsStr}
-                  onChange={(e) => setProdOptionsStr(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-[#DFDDD6]"
+                  type="checkbox"
+                  id="prod-available"
+                  checked={prodIsAvailable}
+                  onChange={(e) => setProdIsAvailable(e.target.checked)}
+                  className="size-4 accent-primary"
                 />
+                <Label htmlFor="prod-available" className="font-bold text-gray-700 cursor-pointer">
+                  Stok Tersedia
+                </Label>
               </div>
+            </div>
 
-              <div>
-                <label className="font-bold text-gray-600 block mb-1">Deskripsi Singkat</label>
-                <textarea
-                  rows={2}
-                  value={prodDescription}
-                  onChange={(e) => setProdDescription(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-[#DFDDD6]"
-                />
-              </div>
-
-              {/* Upload Foto */}
-              <div>
-                <label className="font-bold text-gray-600 block mb-1">Foto Menu (Vercel Blob)</label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handleImageUpload}
-                  className="w-full text-xs text-gray-500"
-                />
-                {uploadingImage && <span className="text-[11px] text-gray-400 mt-1 block">Mengunggah foto...</span>}
-                {prodPhotoUrl && <span className="text-[11px] text-emerald-700 mt-1 block">✓ Foto terlampir</span>}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-gray-600 block mb-1">Label Promosi (Opsional)</label>
-                  <input
-                    type="text"
-                    placeholder="Best Seller / Chef Special"
-                    value={prodLabel}
-                    onChange={(e) => setProdLabel(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-[#DFDDD6]"
-                  />
-                </div>
-                <div className="flex items-center gap-2 pt-5">
-                  <input
-                    type="checkbox"
-                    id="prod-available"
-                    checked={prodIsAvailable}
-                    onChange={(e) => setProdIsAvailable(e.target.checked)}
-                    className="accent-[#1C2955]"
-                  />
-                  <label htmlFor="prod-available" className="font-bold text-gray-700 cursor-pointer">
-                    Stok Tersedia
-                  </label>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowProductModal(false)}
-                  className="px-4 py-2 font-bold text-gray-600"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  className="px-4 py-2 bg-[#1C2955] text-white font-bold rounded-xl"
-                >
-                  Simpan Produk
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="ghost">Batal</Button>
+              </DialogClose>
+              <Button type="submit" disabled={actionLoading}>
+                {actionLoading && <Loader2 className="animate-spin" />}
+                Simpan Produk
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* MODAL: Tambah/Edit Kategori */}
-      {showCategoryModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-lg border border-[#DFDDD6]">
-            <h3 className="text-base font-bold text-[#1C2955] mb-4">
-              {editingCategoryId ? "Edit Kategori" : "Tambah Kategori Baru"}
-            </h3>
+      <Dialog open={showCategoryModal} onOpenChange={setShowCategoryModal}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{editingCategoryId ? "Edit Kategori" : "Tambah Kategori Baru"}</DialogTitle>
+            <DialogDescription>Jenis menentukan syarat pre-order: minimal 1 makanan dan 1 minuman.</DialogDescription>
+          </DialogHeader>
 
-            <form onSubmit={handleSaveCategory} className="flex flex-col gap-3 text-xs">
-              <div>
-                <label className="font-bold text-gray-600 block mb-1">Nama Kategori</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: Snack & Sides"
-                  value={catName}
-                  onChange={(e) => setCatName(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-[#DFDDD6]"
-                />
-              </div>
+          <form onSubmit={handleSaveCategory} className="flex flex-col gap-3 text-xs">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="cat-name" className="text-xs font-bold text-gray-600">Nama Kategori</Label>
+              <Input
+                id="cat-name"
+                required
+                placeholder="Contoh: Snack & Sides"
+                value={catName}
+                onChange={(e) => setCatName(e.target.value)}
+              />
+            </div>
 
-              <div>
-                <label className="font-bold text-gray-600 block mb-1">Jenis (FOOD / DRINK)</label>
-                <select
-                  value={catKind}
-                  onChange={(e) => setCatKind(e.target.value as "FOOD" | "DRINK")}
-                  className="w-full p-2.5 rounded-xl border border-[#DFDDD6]"
-                >
-                  <option value="FOOD">FOOD (Makanan / Snack / Dessert)</option>
-                  <option value="DRINK">DRINK (Minuman / Kopi / Teh)</option>
-                </select>
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="cat-kind" className="text-xs font-bold text-gray-600">Jenis</Label>
+              <Select value={catKind} onValueChange={(v) => setCatKind(v as "FOOD" | "DRINK")}>
+                <SelectTrigger id="cat-kind" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FOOD">FOOD (Makanan / Snack / Dessert)</SelectItem>
+                  <SelectItem value="DRINK">DRINK (Minuman / Kopi / Teh)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCategoryModal(false)}
-                  className="px-4 py-2 font-bold text-gray-600"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  className="px-4 py-2 bg-[#1C2955] text-white font-bold rounded-xl"
-                >
-                  Simpan Kategori
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="ghost">Batal</Button>
+              </DialogClose>
+              <Button type="submit" disabled={actionLoading}>
+                {actionLoading && <Loader2 className="animate-spin" />}
+                Simpan Kategori
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

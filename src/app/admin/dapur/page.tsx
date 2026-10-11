@@ -2,6 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { formatDateIndo, formatTimeRange } from "@/lib/format";
+import { AlarmClock, AlertTriangle, CupSoda, Printer, Soup } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface KitchenItemTotal {
   productName: string;
@@ -97,13 +102,9 @@ export default function AdminDapurPage() {
             className="px-3.5 py-2 text-xs rounded-xl border border-[#DFDDD6] outline-none text-[#1C2955] font-semibold bg-white"
           />
 
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="px-4 py-2 bg-[#1C2955] text-white text-xs font-bold rounded-xl shadow-xs hover:bg-[#1A2751] transition-all flex items-center gap-1.5"
-          >
-            🖨️ Cetak Rekap
-          </button>
+          <Button type="button" onClick={() => window.print()}>
+            <Printer /> Cetak Rekap
+          </Button>
         </div>
       </div>
 
@@ -116,15 +117,16 @@ export default function AdminDapurPage() {
       </div>
 
       {errorMsg && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl no-print">
-          ⚠️ {errorMsg}
-        </div>
+        <Alert variant="destructive" className="bg-white no-print">
+          <AlertTriangle />
+          <AlertDescription>{errorMsg}</AlertDescription>
+        </Alert>
       )}
 
       {loading ? (
-        <div className="py-20 text-center">
-          <div className="inline-block w-8 h-8 border-3 border-[#1C2955]/20 border-t-[#1C2955] rounded-full animate-spin mb-3" />
-          <p className="text-xs text-gray-500 font-medium">Memuat rekap dapur...</p>
+        <div className="flex flex-col gap-6" aria-label="Memuat rekap dapur">
+          <Skeleton className="h-48 w-full rounded-3xl" />
+          <Skeleton className="h-64 w-full rounded-3xl" />
         </div>
       ) : (
         <>
@@ -143,7 +145,7 @@ export default function AdminDapurPage() {
                 {/* Makanan */}
                 <div>
                   <h3 className="text-xs font-extrabold text-[#1C2955] mb-2 flex items-center gap-1.5">
-                    🍲 Makanan ({foodTotals.reduce((s, i) => s + i.quantity, 0)} porsi)
+                    <Soup className="size-4" /> Makanan ({foodTotals.reduce((s, i) => s + i.quantity, 0)} porsi)
                   </h3>
                   <div className="divide-y divide-gray-100 text-xs border border-gray-100 rounded-xl overflow-hidden">
                     {foodTotals.map((item, idx) => (
@@ -167,7 +169,7 @@ export default function AdminDapurPage() {
                 {/* Minuman */}
                 <div>
                   <h3 className="text-xs font-extrabold text-[#1C2955] mb-2 flex items-center gap-1.5">
-                    ☕ Minuman ({drinkTotals.reduce((s, i) => s + i.quantity, 0)} gelas)
+                    <CupSoda className="size-4" /> Minuman ({drinkTotals.reduce((s, i) => s + i.quantity, 0)} gelas)
                   </h3>
                   <div className="divide-y divide-gray-100 text-xs border border-gray-100 rounded-xl overflow-hidden">
                     {drinkTotals.map((item, idx) => (
@@ -215,9 +217,9 @@ export default function AdminDapurPage() {
                       <div>
                         <div className="flex items-center justify-between font-bold text-[#1C2955] mb-1">
                           <span className="text-sm">{res.code} — {res.room.name}</span>
-                          <span className="px-2.5 py-1 bg-[#1C2955] text-white rounded-lg text-xs font-mono font-bold">
-                            ⏰ {effectiveTimeStr} WIB
-                          </span>
+                          <Badge className="font-mono">
+                            <AlarmClock /> {effectiveTimeStr} WIB
+                          </Badge>
                         </div>
                         <div className="text-gray-500 text-[11px] mb-2">
                           Pemesan: <span className="font-bold text-gray-700">{res.customerName}</span> (Sesi: {formatTimeRange(res.startAt, res.endAt)})

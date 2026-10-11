@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { hashPassword } from "better-auth/crypto";
 import { prisma } from "./db";
+import { env } from "./env";
 import { UnauthorizedError } from "./http";
 
 export const auth = betterAuth({
@@ -12,8 +13,8 @@ export const auth = betterAuth({
     enabled: true,
     disableSignUp: true,
   },
-  secret: process.env.BETTER_AUTH_SECRET || "default_secret_for_tests_at_least_32_characters",
-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+  secret: env.BETTER_AUTH_SECRET,
+  baseURL: env.BETTER_AUTH_URL,
 });
 
 export async function requireAdmin(request: Request) {

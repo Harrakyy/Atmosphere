@@ -58,6 +58,12 @@ export class InvalidTransitionError extends AppError {
   }
 }
 
+export class CodeCollisionError extends AppError {
+  constructor() {
+    super("CODE_COLLISION", "Gagal membuat kode reservasi. Silakan coba lagi.", 503);
+  }
+}
+
 export class PaymentGatewayError extends AppError {
   constructor(message = "Gagal menghubungi payment gateway.") {
     super("PAYMENT_GATEWAY_ERROR", message, 502);

@@ -2,10 +2,18 @@
 
 import { useEffect, useState, useRef, use, useCallback } from "react";
 import Link from "next/link";
-import QRCode from "qrcode";
 import { Header } from "@/components/Header";
 import { Stepper } from "@/components/Stepper";
 import { formatRupiah, formatDateIndo, formatTimeRange, getStatusInfo } from "@/lib/format";
+import { downloadCodeCard } from "@/lib/code-card";
+import { formatJadwal } from "@/server/time";
+import { toast } from "sonner";
+import { AlertTriangle, Check, Copy, CreditCard, Download, Loader2, MessageCircle, Phone, Search } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TicketData {
   code: string;
@@ -36,7 +44,6 @@ interface TicketData {
   holdExpiresAt: string;
   snapToken: string | null;
   snapRedirectUrl: string | null;
-  checkInUrl: string;
   wa: {
     saveLink: string;
     contactCafeLink: string;
@@ -53,7 +60,6 @@ export default function TiketPage({
   const [ticket, setTicket] = useState<TicketData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const pollCountRef = useRef(0);
@@ -69,15 +75,6 @@ export default function TiketPage({
 
       setTicket(json.data);
 
-      // Generate QR Code dari checkInUrl
-      if (json.data.checkInUrl) {
-        const url = await QRCode.toDataURL(json.data.checkInUrl, {
-          width: 300,
-          margin: 2,
-          color: { dark: "#1C2955", light: "#ffffff" },
-        });
-        setQrDataUrl(url);
-      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Gagal memuat tiket.");
     } finally {
@@ -115,6 +112,9 @@ export default function TiketPage({
     return () => clearInterval(interval);
   }, [ticket, token]);
 
+  // Kode hanya berguna ke kasir kalau reservasi sudah lunas dan belum selesai
+  const canCheckIn = ticket?.status === "CONFIRMED" || ticket?.status === "CHECKED_IN";
+
   const handleCopyCode = () => {
     if (!ticket) return;
     navigator.clipboard.writeText(ticket.code);
@@ -122,214 +122,185 @@ export default function TiketPage({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownloadQr = () => {
-    if (!qrDataUrl || !ticket) return;
-    const link = document.createElement("a");
-    link.href = qrDataUrl;
-    link.download = `${ticket.code}-qr.png`;
-    link.click();
+  const handleDownloadCode = async () => {
+    if (!ticket) return;
+    try {
+      await downloadCodeCard({
+        code: ticket.code,
+        roomName: ticket.room.name,
+        jadwal: formatJadwal(new Date(ticket.startAt), new Date(ticket.endAt)),
+        customerName: ticket.customerName,
+      });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Gagal mengunduh kode.");
+    }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F3F2EF]">
+    <div className="min-h-screen flex flex-col">
       <Header />
       <Stepper currentStep={5} />
 
       <main className="flex-1 max-w-3xl w-full mx-auto p-4 md:py-8 flex flex-col gap-6">
         {loading && (
-          <div className="py-20 text-center">
-            <div className="inline-block w-8 h-8 border-3 border-[#1C2955]/20 border-t-[#1C2955] rounded-full animate-spin mb-3" />
-            <p className="text-xs text-gray-500 font-medium">Memuat e-tiket reservasi...</p>
-          </div>
+          <Card className="p-8 items-center gap-4" aria-label="Memuat e-tiket reservasi">
+            <Skeleton className="h-6 w-28 rounded-full" />
+            <Skeleton className="h-8 w-1/2" />
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="size-48 rounded-2xl" />
+          </Card>
         )}
 
         {!loading && error && (
-          <div className="bg-white p-8 rounded-2xl border border-rose-200 text-center shadow-xs">
-            <h1 className="text-base font-bold text-rose-700 mb-2">⚠️ {error}</h1>
-            <p className="text-xs text-gray-500 mb-4">
+          <Alert variant="destructive" className="bg-white p-6">
+            <AlertTriangle />
+            <AlertTitle>{error}</AlertTitle>
+            <AlertDescription>
               Pastikan link e-tiket yang Anda buka sudah benar atau cek kembali di halaman pencarian tiket.
-            </p>
-            <Link
-              href="/cek-reservasi"
-              className="inline-block px-5 py-2.5 bg-[#1C2955] text-white text-xs font-bold rounded-xl"
-            >
-              Cari Reservasi
-            </Link>
-          </div>
+              <Button asChild size="sm" className="mt-3">
+                <Link href="/cek-reservasi">
+                  <Search /> Cari Reservasi
+                </Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
 
         {!loading && ticket && (
           <div className="flex flex-col gap-5">
             {/* Ticket Header & Status Card */}
-            <div className="bg-white rounded-3xl p-6 md:p-8 border border-[#DFDDD6] shadow-sm flex flex-col items-center text-center relative overflow-hidden">
+            <Card className="rounded-3xl p-6 md:p-8 items-center text-center gap-0 shadow-sm">
               {/* Status Banner */}
               {(() => {
                 const s = getStatusInfo(ticket.status);
                 return (
-                  <span
-                    className={`inline-block px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-4 ${s.bg} ${s.text}`}
-                  >
+                  <Badge className={`px-4 py-1.5 h-auto text-xs uppercase tracking-wider mb-4 ${s.bg} ${s.text}`}>
                     {s.label}
-                  </span>
+                  </Badge>
                 );
               })()}
 
-              <h1 className="text-2xl md:text-3xl font-extrabold text-[#1C2955] tracking-tight">
-                {ticket.room.name}
-              </h1>
-              <p className="text-xs md:text-sm text-gray-600 mt-1">
+              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">{ticket.room.name}</h1>
+              <p className="text-xs md:text-sm text-muted-foreground mt-1">
                 {formatDateIndo(ticket.startAt)} • {formatTimeRange(ticket.startAt, ticket.endAt)}
               </p>
 
               {/* Booking Code with Copy */}
-              <div className="mt-4 flex items-center gap-2 bg-[#F3F2EF] px-4 py-2 rounded-xl border border-[#DFDDD6]">
-                <span className="text-xs text-gray-500 font-medium">Kode:</span>
-                <span className="font-mono font-extrabold text-base text-[#1C2955]">
+              <div className="mt-5 flex flex-col items-center gap-2 bg-muted px-8 py-5 rounded-2xl border w-full max-w-xs">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Kode Reservasi
+                </span>
+                <span
+                  className="font-mono font-extrabold text-5xl tracking-[0.3em] pl-[0.3em] text-brand"
+                  aria-label={`Kode reservasi ${ticket.code.split("").join(" ")}`}
+                >
                   {ticket.code}
                 </span>
-                <button
-                  type="button"
-                  onClick={handleCopyCode}
-                  className="text-xs text-[#D81B60] font-bold hover:underline ml-1"
-                >
-                  {copied ? "Tersalin!" : "Salin"}
-                </button>
-              </div>
-
-              {/* QR Code Container */}
-              {qrDataUrl && (
-                <div className="mt-6 flex flex-col items-center">
-                  <div className="p-3 bg-white border border-[#DFDDD6] rounded-2xl shadow-xs">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={qrDataUrl}
-                      alt={`QR Code ${ticket.code}`}
-                      className="w-48 h-48 rounded-lg"
-                    />
-                  </div>
-                  <span className="text-[11px] text-gray-500 mt-2">
-                    Tunjukkan QR code ini ke kasir/staff saat tiba di cafe
+                <Button type="button" variant="ghost" size="sm" onClick={handleCopyCode}>
+                  {copied ? <Check /> : <Copy />}
+                  {copied ? "Tersalin" : "Salin"}
+                </Button>
+                {canCheckIn && (
+                  <span className="text-[11px] text-muted-foreground">
+                    Tunjukkan kode ini ke kasir saat tiba di cafe
                   </span>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Status Pending Payment notice */}
               {ticket.status === "PENDING_PAYMENT" && (
-                <div className="mt-5 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-center w-full max-w-md">
-                  <p className="text-xs font-semibold text-amber-800">
-                    ⏳ Menunggu konfirmasi pembayaran...
-                  </p>
-                  <p className="text-[11px] text-amber-700 mt-0.5">
+                <Alert className="mt-5 max-w-md border-amber-200 bg-amber-50 text-amber-800 text-left" aria-live="polite">
+                  <Loader2 className="animate-spin" />
+                  <AlertTitle>Menunggu konfirmasi pembayaran...</AlertTitle>
+                  <AlertDescription className="text-amber-700">
                     Halaman ini akan otomatis terbarui saat pembayaran berhasil diverifikasi.
-                  </p>
-                  {ticket.snapRedirectUrl && (
-                    <a
-                      href={ticket.snapRedirectUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-block mt-3 px-4 py-2 bg-[#1C2955] text-white text-xs font-bold rounded-lg"
-                    >
-                      Buka Pembayaran Snap →
-                    </a>
-                  )}
-                </div>
+                    {ticket.snapRedirectUrl && (
+                      <Button asChild size="sm" className="mt-2">
+                        <a href={ticket.snapRedirectUrl} target="_blank" rel="noopener noreferrer">
+                          <CreditCard /> Buka Pembayaran
+                        </a>
+                      </Button>
+                    )}
+                  </AlertDescription>
+                </Alert>
               )}
 
-              {/* Action Buttons: WA & Download QR */}
+              {/* Action Buttons: WA & Unduh Kode */}
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3 w-full">
-                <a
-                  href={ticket.wa.saveLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
-                >
-                  💬 Simpan ke WhatsApp
-                </a>
+                <Button asChild size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <a href={ticket.wa.saveLink} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle /> Simpan ke WhatsApp
+                  </a>
+                </Button>
 
-                {qrDataUrl && (
-                  <button
-                    type="button"
-                    onClick={handleDownloadQr}
-                    className="px-4 py-2.5 bg-white border border-[#DFDDD6] hover:bg-[#F3F2EF] text-[#1C2955] font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
-                  >
-                    📥 Unduh QR (PNG)
-                  </button>
+                {canCheckIn && (
+                  <Button type="button" variant="outline" size="lg" onClick={handleDownloadCode}>
+                    <Download /> Unduh Kode (PNG)
+                  </Button>
                 )}
 
-                <a
-                  href={ticket.wa.contactCafeLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2.5 bg-white border border-[#DFDDD6] hover:bg-[#F3F2EF] text-[#1C2955] font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
-                >
-                  📞 Hubungi Cafe
-                </a>
+                <Button asChild variant="outline" size="lg">
+                  <a href={ticket.wa.contactCafeLink} target="_blank" rel="noopener noreferrer">
+                    <Phone /> Hubungi Cafe
+                  </a>
+                </Button>
               </div>
-            </div>
+            </Card>
 
             {/* Reservation Summary Details */}
-            <div className="bg-white rounded-3xl p-6 md:p-8 border border-[#DFDDD6] shadow-xs flex flex-col gap-5">
-              <h2 className="text-base font-bold text-[#1C2955] border-b border-[#DFDDD6] pb-3">
-                Detail Pemesan & Rincian Menu
-              </h2>
+            <Card className="rounded-3xl p-6 md:p-8 gap-5">
+              <h2 className="text-base font-bold border-b pb-3">Detail Pemesan & Rincian Menu</h2>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
                 <div>
-                  <span className="text-gray-400 block text-[11px]">Nama Pemesan</span>
-                  <span className="font-bold text-[#1C2955] text-sm">{ticket.customerName}</span>
+                  <dt className="text-muted-foreground text-[11px]">Nama Pemesan</dt>
+                  <dd className="font-bold text-sm">{ticket.customerName}</dd>
                 </div>
                 <div>
-                  <span className="text-gray-400 block text-[11px]">Jumlah Tamu</span>
-                  <span className="font-bold text-[#1C2955] text-sm">{ticket.guestCount} orang</span>
+                  <dt className="text-muted-foreground text-[11px]">Jumlah Tamu</dt>
+                  <dd className="font-bold text-sm">{ticket.guestCount} orang</dd>
                 </div>
                 <div>
-                  <span className="text-gray-400 block text-[11px]">Waktu Penyajian</span>
-                  <span className="font-bold text-[#1C2955]">
+                  <dt className="text-muted-foreground text-[11px]">Waktu Penyajian</dt>
+                  <dd className="font-bold">
                     {ticket.servingTime === "ON_ARRIVAL" && "Saat Tiba"}
                     {ticket.servingTime === "AFTER_30_MIN" && "30 Menit Setelah Tiba"}
-                    {ticket.servingTime === "CUSTOM" && `Pukul ${ticket.servingAt ? formatTimeRange(ticket.servingAt, ticket.servingAt).split("–")[0] : ""} WIB`}
-                  </span>
+                    {ticket.servingTime === "CUSTOM" &&
+                      `Pukul ${ticket.servingAt ? formatTimeRange(ticket.servingAt, ticket.servingAt).split("–")[0] : ""} WIB`}
+                  </dd>
                 </div>
-              </div>
+              </dl>
 
               {ticket.kitchenNote && (
-                <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs">
-                  <span className="font-bold text-[#1C2955]">Catatan Dapur:</span>{" "}
-                  <span className="italic text-gray-600">&quot;{ticket.kitchenNote}&quot;</span>
+                <div className="p-3 bg-muted/60 border rounded-xl text-xs">
+                  <span className="font-bold">Catatan Dapur:</span>{" "}
+                  <span className="italic text-muted-foreground">&quot;{ticket.kitchenNote}&quot;</span>
                 </div>
               )}
 
               {/* Items Table */}
               <div className="mt-2">
-                <span className="block text-xs font-bold text-[#1C2955] mb-2 uppercase tracking-wider">
-                  Menu Yang Dipesan
-                </span>
-                <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
+                <span className="block text-xs font-bold mb-2 uppercase tracking-wider">Menu Yang Dipesan</span>
+                <div className="divide-y border rounded-xl overflow-hidden">
                   {ticket.items.map((item) => (
-                    <div key={item.id} className="p-3 bg-gray-50/50 flex items-center justify-between text-xs">
+                    <div key={item.id} className="p-3 bg-muted/30 flex items-center justify-between text-xs">
                       <div>
-                        <span className="font-bold text-[#1C2955]">
+                        <span className="font-bold">
                           {item.quantity}x {item.productName}
                         </span>
-                        {item.option && (
-                          <span className="text-gray-500 ml-1">({item.option})</span>
-                        )}
+                        {item.option && <span className="text-muted-foreground ml-1">({item.option})</span>}
                       </div>
-                      <span className="font-semibold text-gray-700">
-                        {formatRupiah(item.lineTotal)}
-                      </span>
+                      <span className="font-semibold">{formatRupiah(item.lineTotal)}</span>
                     </div>
                   ))}
                 </div>
 
-                <div className="mt-3 flex items-center justify-between p-3 bg-[#1C2955]/5 rounded-xl">
-                  <span className="text-xs font-bold text-[#1C2955]">Total Pre-Order:</span>
-                  <span className="text-base font-extrabold text-[#1C2955]">
-                    {formatRupiah(ticket.totalAmount)}
-                  </span>
+                <div className="mt-3 flex items-center justify-between p-3 bg-primary/5 rounded-xl">
+                  <span className="text-xs font-bold">Total Pre-Order:</span>
+                  <span className="text-base font-extrabold">{formatRupiah(ticket.totalAmount)}</span>
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
         )}
       </main>

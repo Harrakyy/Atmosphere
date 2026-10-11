@@ -11,16 +11,17 @@ describe("Database Seed", () => {
     await prisma.product.deleteMany();
     await prisma.category.deleteMany();
     await prisma.room.deleteMany();
+    await prisma.setting.deleteMany();
   });
 
-  it("seeds 80 products, 4 categories, 3 rooms, and 15 drinks have Hot|Ice options", async () => {
+  it("seeds 80 products, 4 categories, 4 rooms, and 15 drinks have Hot|Ice options", async () => {
     await seed(prisma);
 
     const setting = await prisma.setting.findUnique({ where: { id: 1 } });
     expect(setting).toBeDefined();
 
     const rooms = await prisma.room.findMany();
-    expect(rooms).toHaveLength(3);
+    expect(rooms).toHaveLength(4);
 
     const categories = await prisma.category.findMany();
     expect(categories).toHaveLength(4);

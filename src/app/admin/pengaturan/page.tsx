@@ -2,6 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { AlertTriangle, Loader2, Save } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface SettingsData {
   openTime: string;
@@ -26,7 +31,6 @@ export default function AdminPengaturanPage() {
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fetchSettings = useCallback(async () => {
@@ -57,7 +61,6 @@ export default function AdminPengaturanPage() {
 
     setSaving(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       const res = await fetch("/api/admin/settings", {
@@ -72,7 +75,7 @@ export default function AdminPengaturanPage() {
       }
 
       setSettings(json.data);
-      setSuccessMsg("Pengaturan berhasil disimpan!");
+      toast.success("Pengaturan berhasil disimpan!");
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Gagal menyimpan pengaturan.");
     } finally {
@@ -82,18 +85,19 @@ export default function AdminPengaturanPage() {
 
   if (loading) {
     return (
-      <div className="py-20 text-center">
-        <div className="inline-block w-8 h-8 border-3 border-[#1C2955]/20 border-t-[#1C2955] rounded-full animate-spin mb-3" />
-        <p className="text-xs text-gray-500 font-medium">Memuat pengaturan sistem...</p>
+      <div className="max-w-4xl mx-auto flex flex-col gap-6" aria-label="Memuat pengaturan sistem">
+        <Skeleton className="h-8 w-72" />
+        <Skeleton className="h-96 w-full rounded-3xl" />
       </div>
     );
   }
 
   if (!settings) {
     return (
-      <div className="p-8 text-center text-sm font-bold text-rose-700 bg-white rounded-3xl border border-rose-200">
-        ⚠️ {errorMsg || "Gagal memuat pengaturan."}
-      </div>
+      <Alert variant="destructive" className="bg-white">
+        <AlertTriangle />
+        <AlertDescription>{errorMsg || "Gagal memuat pengaturan."}</AlertDescription>
+      </Alert>
     );
   }
 
@@ -108,16 +112,11 @@ export default function AdminPengaturanPage() {
         </p>
       </div>
 
-      {successMsg && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl">
-          ✓ {successMsg}
-        </div>
-      )}
-
       {errorMsg && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl">
-          ⚠️ {errorMsg}
-        </div>
+        <Alert variant="destructive" className="bg-white">
+          <AlertTriangle />
+          <AlertDescription>{errorMsg}</AlertDescription>
+        </Alert>
       )}
 
       <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 md:p-8 border border-[#DFDDD6] shadow-xs flex flex-col gap-6 text-xs">
@@ -286,13 +285,10 @@ export default function AdminPengaturanPage() {
         </div>
 
         <div className="pt-4 border-t border-[#DFDDD6] flex justify-end">
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-6 py-3 bg-[#1C2955] hover:bg-[#1A2751] text-white font-bold text-xs rounded-xl shadow-xs transition-all"
-          >
+          <Button type="submit" size="xl" disabled={saving}>
+            {saving ? <Loader2 className="animate-spin" /> : <Save />}
             {saving ? "Menyimpan..." : "Simpan Pengaturan"}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

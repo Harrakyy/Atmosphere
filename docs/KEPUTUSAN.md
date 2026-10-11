@@ -7,7 +7,7 @@ Dokumen ini mencatat **apa yang diputuskan, kenapa, dan alternatif apa yang dito
 - 🟡 Usulan teknis, disusun saat menulis PRD. Masih perlu di-review.
 - ❓ Masih menunggu konfirmasi mitra. Sementara pakai nilai asumsi.
 
-Terakhir diperbarui: 10 Oktober 2026
+Terakhir diperbarui: 11 Oktober 2026
 
 ---
 
@@ -41,8 +41,8 @@ Terakhir diperbarui: 10 Oktober 2026
 - **Ditolak:** refund lewat API Midtrans (lebih rumit, dan jumlah kasusnya sangat sedikit).
 
 ### K-06 ✅ E-tiket dibagikan lewat WhatsApp memakai link, bukan gambar
-- `wa.me` hanya bisa mengirim teks. Karena itu QR ditampilkan di **halaman e-tiket**, lalu link halamannya yang dikirim lewat WA.
-- Ada dua tombol: **"Simpan ke WhatsApp"** (`wa.me/?text=`, customer memilih chat ke diri sendiri) dan **"Hubungi Cafe"** (`wa.me/<nomor cafe>`). Tombol **Unduh QR** juga disediakan.
+- `wa.me` hanya bisa mengirim teks. Karena itu kode booking ditampilkan di **halaman e-tiket**, lalu link halamannya yang dikirim lewat WA.
+- Ada dua tombol: **"Simpan ke WhatsApp"** (`wa.me/?text=`, customer memilih chat ke diri sendiri) dan **"Hubungi Cafe"** (`wa.me/<nomor cafe>`). Tombol **Unduh Kode** (kartu PNG) juga disediakan.
 - **Ditolak:** WhatsApp API berbayar (Fonnte, Wablas, Cloud API) untuk mengirim gambar otomatis.
 
 ### K-10 ✅ Batal atau ganti jadwal atas permintaan customer: lewat WA, diproses admin
@@ -165,12 +165,13 @@ Terakhir diperbarui: 10 Oktober 2026
 - Sebelum membuat reservasi, reservasi `PENDING_PAYMENT` yang waktu tahannya sudah lewat diubah menjadi `EXPIRED` di dalam transaksi yang sama. Query ketersediaan juga menganggap slot itu kosong.
 - **Alasan:** cron di paket gratis Vercel terbatas. Dengan cara ini sistem tetap benar walaupun cron tidak berjalan.
 
-### K-27 🟡 QR e-tiket berisi URL check-in admin
-- Isi QR: `https://<domain>/admin/check-in/<KODE>`. Kasir cukup memindai dengan **kamera HP biasa**, halaman admin terbuka, lalu tekan **Check-in**.
-- **Alasan:** tidak perlu membuat pemindai QR di dalam aplikasi.
+### ~~K-27 QR e-tiket berisi URL check-in admin~~ → **K-27 (revisi) ✅ Check-in dengan kode booking 4 karakter, tanpa QR**
+- Kode: 4 karakter dari `23456789ABCDEFGHJKMNPQRSTUVWXYZ`, minimal 1 huruf dan 1 angka (contoh `7K2F`). Customer menyimpannya sebagai kartu PNG lewat tombol **Unduh Kode**. Kasir mengetik kode di kotak **Check-in** pada dashboard admin.
+- **Alasan revisi:** kode pendek lebih mudah dibacakan lewat WA dan diketik kasir; tidak perlu pemindai atau kamera.
+- **Konsekuensi:** kode 4 karakter bisa ditebak, jadi pencarian di Cek Reservasi dibatasi 10 percobaan per 15 menit per IP. `order_id` Midtrans diberi sufiks acak supaya tetap unik (lihat R-I3).
 
 ### K-28 🟡 Link e-tiket memakai token acak, terpisah dari kode booking
-- Kode untuk dibaca manusia: `ATM-7K2F9Q` (6 karakter, tanpa 0/O/1/I/L). Link e-tiket: `/tiket/<token 32 karakter>`.
+- Kode untuk dibaca manusia: `7K2F` (4 karakter, tanpa 0/O/1/I/L; kode lama berformat `ATM-7K2F9Q` tetap valid). Link e-tiket: `/tiket/<token 32 karakter>`.
 - **Alasan:** kode yang pendek bisa ditebak. Token yang panjang tidak.
 
 ### K-29 🟡 MVP tidak mengirim email

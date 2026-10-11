@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     await requireAdmin(request);
     const searchParams = request.nextUrl.searchParams;
     const validated = querySchema.parse({
-      date: searchParams.get("date"),
+      date: searchParams.get("date") ?? undefined, // tanpa date → hari ini (WIB)
       status: searchParams.get("status") || undefined,
     });
 

@@ -9,6 +9,7 @@ describe("Database Constraints", () => {
     await prisma.reservation.deleteMany();
     await prisma.roomBlock.deleteMany();
     await prisma.room.deleteMany();
+    await prisma.setting.deleteMany();
   });
 
   it("rejects overlapping confirmed reservations in the same room with 23P01", async () => {

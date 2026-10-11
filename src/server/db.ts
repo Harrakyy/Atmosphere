@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import "./env"; // validasi env saat start (§10): gagal cepat kalau ada yang kosong
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

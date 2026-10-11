@@ -56,6 +56,7 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
     await prisma.product.deleteMany();
     await prisma.category.deleteMany();
     await prisma.room.deleteMany();
+    await prisma.setting.deleteMany();
     await prisma.session.deleteMany();
     await prisma.account.deleteMany();
     await prisma.user.deleteMany();
@@ -64,7 +65,7 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
 
     fakeGateway = new FakeGateway();
 
-    const room = await prisma.room.findFirst({ where: { slug: "the-loft" } });
+    const room = await prisma.room.findFirst({ where: { slug: "ruangan-1" } });
     testRoomId = room!.id;
 
     const food = await prisma.product.findFirst({ where: { name: "Pasta Aglio Olio" } });
@@ -149,6 +150,17 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
     await expect(
       checkInReservation(res.id, adminUserId, new Date("2026-10-18T10:00:00+07:00"), prisma)
     ).rejects.toThrow(InvalidTransitionError);
+  });
+
+  it("Admin cannot cancel an EXPIRED (unpaid) reservation, so no phantom refund is created", async () => {
+    const res = await createTestRes();
+    await prisma.reservation.update({ where: { id: res.id }, data: { status: "EXPIRED" } });
+
+    await expect(
+      cancelReservation(res.id, { by: "CAFE", reason: "Renovasi" }, adminUserId, new Date(), prisma)
+    ).rejects.toThrow(InvalidTransitionError);
+    const after = await prisma.reservation.findUnique({ where: { id: res.id } });
+    expect(after?.refundStatus).toBe("NONE");
   });
 
   it("Check-in succeeds on CONFIRMED reservation on H-day (WIB)", async () => {
@@ -266,14 +278,14 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
 
   // Reschedule
   it("Reschedule to occupied slot throws 409 SlotTakenError; to free slot succeeds and frees old slot", async () => {
-    // Reservasi 1: The Loft 10:00 - 12:00
+    // Reservasi 1: Ruangan 1 10:00 - 12:00
     const res1 = await createTestRes("2026-10-18", "10:00", "12:00");
     await prisma.reservation.update({
       where: { id: res1.id },
       data: { status: "CONFIRMED" },
     });
 
-    // Reservasi 2: The Loft 14:00 - 16:00
+    // Reservasi 2: Ruangan 1 14:00 - 16:00
     const res2 = await createTestRes("2026-10-18", "14:00", "16:00");
     await prisma.reservation.update({
       where: { id: res2.id },
@@ -444,7 +456,7 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
     });
 
     // Reservasi 2: CHECKED_IN dengan Jeruk (Ice) x3
-    const sunroom = await prisma.room.findFirst({ where: { slug: "the-sunroom" } });
+    const sunroom = await prisma.room.findFirst({ where: { slug: "ruangan-2" } });
     const res2 = await createReservation(
       {
         roomId: sunroom!.id,
@@ -471,7 +483,7 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
     });
 
     // Reservasi 3: CANCELLED (harus diabaikan)
-    const eventSpace = await prisma.room.findFirst({ where: { slug: "event-space" } });
+    const eventSpace = await prisma.room.findFirst({ where: { slug: "ruangan-3" } });
     const res3 = await createReservation(
       {
         roomId: eventSpace!.id,
@@ -614,6 +626,14 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
     });
     const validRes = await patchSettingsRoute(validReq);
     expect(validRes.status).toBe(200);
+
+    // PATCH sebagian tetap dicek terhadap holdMinutes yang tersimpan (15)
+    const partialReq = new NextRequest("http://localhost:3000/api/admin/settings", {
+      method: "PATCH",
+      headers: { cookie: adminCookie },
+      body: JSON.stringify({ paymentExpiryMinutes: 20 }),
+    });
+    expect((await patchSettingsRoute(partialReq)).status).toBe(400);
   });
 
   // Upload magic bytes validation
@@ -637,6 +657,7 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
     const res = await createTestRes();
     const summary = await getCheckInSummaryByCode(res.code, prisma);
     expect(summary.code).toBe(res.code);
+    expect((await getCheckInSummaryByCode(res.code.toLowerCase(), prisma)).id).toBe(res.id);
 
     await expect(getCheckInSummaryByCode("INVALID-CODE", prisma)).rejects.toThrow();
   });
@@ -644,7 +665,7 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
   // Rooms CRUD
   it("Rooms CRUD: getAdminRooms, createRoom, updateRoom work correctly", async () => {
     const initialRooms = await getAdminRooms(prisma);
-    expect(initialRooms.length).toBe(3);
+    expect(initialRooms.length).toBe(4);
 
     const newRoom = await createRoom(
       {

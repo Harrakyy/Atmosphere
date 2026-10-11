@@ -9,7 +9,7 @@ describe("wa.ts R-W1 to R-W4", () => {
   it("R-W1: saveTicketLink generates valid wa.me share link", () => {
     const url = saveTicketLink({
       code: "ATM-7K2F9Q",
-      roomName: "The Loft",
+      roomName: "Ruangan 1",
       start,
       end,
       guestCount: 5,
@@ -21,9 +21,10 @@ describe("wa.ts R-W1 to R-W4", () => {
     const text = decodeURIComponent(url.replace("https://wa.me/?text=", ""));
     expect(text).toContain("Reservasi Atmosphere Cafe ✅");
     expect(text).toContain("Kode: ATM-7K2F9Q");
-    expect(text).toContain("Ruangan: The Loft • Min, 18 Okt 2026, 10.00–12.00");
+    expect(text).toContain("Ruangan: Ruangan 1 • Min, 18 Okt 2026, 10.00–12.00");
     expect(text).toContain("Tamu: 5 orang");
-    expect(text).toContain("Lihat QR check-in: https://atmosphere.cafe/tiket/tok1234567890abcdefghijklmnopq");
+    expect(text).toContain("Lihat e-tiket: https://atmosphere.cafe/tiket/tok1234567890abcdefghijklmnopq");
+    expect(text).not.toContain("QR");
   });
 
   it("R-W2: contactCafeLink generates cafe contact link", () => {
@@ -46,7 +47,7 @@ describe("wa.ts R-W1 to R-W4", () => {
       customerPhone: "628999888777",
       customerName: "Budi",
       code: "ATM-7K2F9Q",
-      roomName: "The Loft",
+      roomName: "Ruangan 1",
       start,
       end,
       reason: "ada renovasi AC mendadak",
@@ -57,7 +58,7 @@ describe("wa.ts R-W1 to R-W4", () => {
     expect(url.startsWith("https://wa.me/628999888777?text=")).toBe(true);
     const text = decodeURIComponent(url.replace("https://wa.me/628999888777?text=", ""));
     expect(text).toContain("Halo Kak Budi, kami dari Atmosphere Cafe.");
-    expect(text).toContain("Mohon maaf, reservasi ATM-7K2F9Q di The Loft pada Min, 18 Okt 2026, 10.00–12.00 terpaksa kami batalkan karena ada renovasi AC mendadak.");
+    expect(text).toContain("Mohon maaf, reservasi ATM-7K2F9Q di Ruangan 1 pada Min, 18 Okt 2026, 10.00–12.00 terpaksa kami batalkan karena ada renovasi AC mendadak.");
     expect(text).toContain("Pembayaran sebesar Rp 150.000 akan kami refund penuh.");
     expect(text).toContain("Mohon balas dengan: nama bank, nomor rekening, dan nama pemilik rekening. Terima kasih 🙏");
   });
@@ -68,7 +69,7 @@ describe("wa.ts R-W1 to R-W4", () => {
       customerPhone: "628999888777",
       customerName: "Budi",
       code: "ATM-7K2F9Q",
-      roomName: "The Loft",
+      roomName: "Ruangan 1",
       start,
       end,
       reason: "jadwal meeting dibatalkan",
@@ -78,7 +79,7 @@ describe("wa.ts R-W1 to R-W4", () => {
 
     const text = decodeURIComponent(url.replace("https://wa.me/628999888777?text=", ""));
     expect(text).toContain("Halo Kak Budi, kami dari Atmosphere Cafe.");
-    expect(text).toContain("Sesuai permintaan Kakak, reservasi ATM-7K2F9Q di The Loft pada Min, 18 Okt 2026, 10.00–12.00 telah kami batalkan");
+    expect(text).toContain("Sesuai permintaan Kakak, reservasi ATM-7K2F9Q di Ruangan 1 pada Min, 18 Okt 2026, 10.00–12.00 telah kami batalkan");
     expect(text).not.toContain("refund");
     expect(text).not.toContain("nomor rekening");
   });
