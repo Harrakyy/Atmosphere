@@ -194,3 +194,16 @@ export const adminUpdateSettingSchema = z.object({
     .or(z.literal("")),
 });
 
+
+// K-35: HP kasir (SetorPantau)
+export const pairDeviceSchema = z.object({
+  code: z.string().trim().min(8, "Kode pairing 8 karakter").max(12),
+  name: z.string().trim().max(40).default("HP Kasir"),
+});
+
+export const incomingPaymentSchema = z.object({
+  notifId: z.string().min(1).max(300),
+  amount: z.number().int().positive().max(100_000_000),
+  time: z.number().int().positive(),
+  text: z.string().max(500).default(""),
+});

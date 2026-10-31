@@ -48,7 +48,8 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
 
   beforeEach(async () => {
     await prisma.activityLog.deleteMany();
-    await prisma.paymentNotification.deleteMany();
+    await prisma.incomingPayment.deleteMany();
+    await prisma.paymentDevice.deleteMany();
     await prisma.reservationItem.deleteMany();
     await prisma.reservation.deleteMany();
     await prisma.roomBlock.deleteMany();

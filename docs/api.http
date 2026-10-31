@@ -252,3 +252,16 @@ POST {{baseUrl}}/api/admin/reservations/reservation_id_here/mark-paid
 
 ### Admin: Tolak klaim pembayaran (slot dilepas)
 POST {{baseUrl}}/api/admin/reservations/reservation_id_here/reject-payment
+
+### HP kasir: tukar kode pairing dengan token (K-39)
+POST {{baseUrl}}/api/devices/pair
+Content-Type: application/json
+
+{ "code": "KODE8KAR", "name": "HP Kasir" }
+
+### HP kasir: laporkan notif DANA "Pembayaran Masuk" (K-38)
+POST {{baseUrl}}/api/payments/qris/notification
+Authorization: Bearer TOKEN_DARI_PAIRING
+Content-Type: application/json
+
+{ "notifId": "id.dana|1793463850893|Rp30.999 diterima DANA Bisnis.", "amount": 30999, "time": 1793463850893, "text": "Rp30.999 diterima DANA Bisnis." }

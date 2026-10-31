@@ -243,3 +243,20 @@ Terakhir diperbarui: 11 Oktober 2026
 | 7 | Foto produk + konfirmasi nama/typo (lihat `catatan_perapian` di CSV) | Placeholder | K-14 |
 | 8 | Nomor WhatsApp cafe untuk tombol "Hubungi Cafe"? | Diisi di Pengaturan | K-06 |
 | 9 | Apakah mitra setuju harga online 3% lebih tinggi dari harga kasir? | Setuju | K-15 |
+
+## D3. Fase 2: HP Kasir melaporkan pembayaran (1 Nov 2026)
+
+### K-38 ✅ Reservasi langsung Lunas otomatis saat nominal cocok
+- SetorPantau mengirim notif DANA "Pembayaran Masuk" → server mencari reservasi menunggu bayar dengan nominal unik yang sama (R-Q3) → `markPaid` (fungsi yang sama dengan tombol Tandai Lunas).
+- Nominal tanpa pesanan masuk kartu **"Pembayaran tanpa pesanan"** di Beranda admin; bayar terlambat memakai aturan lama (batal + refund penuh bila slot sudah diambil).
+
+### K-39 ✅ Pairing dengan kode 8 karakter + token per HP (bukan HMAC)
+- Admin → Pengaturan → "Hubungkan HP kasir" membuat kode sekali pakai (10 menit). HP menukarnya dengan token 32 byte. Kode dan token hanya disimpan sebagai **sha256**.
+- **Ditolak:** tanda tangan HMAC. HMAC mengharuskan server menyimpan kunci asli, sedangkan HTTPS sudah melindungi isi pesan di jalan. Token ber-hash lebih aman kalau database bocor.
+- Anti-replay: setiap notif diproses sekali per HP (`deviceId + notifId` unik), dan pembayaran hanya bisa cocok dengan reservasi yang **dibuat sebelum** notif muncul.
+- Akses HP bisa dicabut kapan saja; HP yang dicabut ditolak (401) dan SetorPantau memutus koneksinya sendiri.
+
+### K-40 ✅ Pengiriman dari SetorPantau
+- Dikirim saat aplikasi berjalan (terbuka / latar belakang); offline → antri, dicoba ulang otomatis.
+- Hanya transaksi sejak 1 jam sebelum pairing yang dikirim, supaya riwayat lama tidak membanjiri admin.
+- ❓ Batasan: kalau aplikasi ditutup paksa, notif tetap tersimpan tapi baru terkirim saat aplikasi dibuka lagi. Mengirim langsung dari service native butuh kode Kotlin sendiri (tahap berikutnya kalau dibutuhkan).

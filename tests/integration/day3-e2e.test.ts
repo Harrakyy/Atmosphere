@@ -27,7 +27,8 @@ describe("Hari 3 End-to-End Customer and Admin Flow", () => {
 
   beforeEach(async () => {
     await prisma.activityLog.deleteMany();
-    await prisma.paymentNotification.deleteMany();
+    await prisma.incomingPayment.deleteMany();
+    await prisma.paymentDevice.deleteMany();
     await prisma.reservationItem.deleteMany();
     await prisma.reservation.deleteMany();
     await prisma.roomBlock.deleteMany();

@@ -208,6 +208,7 @@ export async function createReservation(
         const created = await tx.reservation.create({
           data: {
             code,
+            createdAt: now, // sama dengan jam yang dipakai aturan lain (hold, anti-replay pembayaran)
             ticketToken: generateTicketToken(),
             roomId: input.roomId,
             startAt,

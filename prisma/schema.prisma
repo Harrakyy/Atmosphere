@@ -176,15 +176,51 @@ model ReservationItem {
   product       Product      @relation(fields: [productId], references: [id])
 }
 
-model PaymentNotification {
-  id                String   @id @default(cuid())
-  orderId           String
-  transactionStatus String
-  signatureValid    Boolean
-  payload           Json
-  receivedAt        DateTime @default(now()) @db.Timestamptz(3)
+// K-35: HP kasir (aplikasi SetorPantau) yang boleh melaporkan pembayaran QRIS
+model PaymentDevice {
+  id          String            @id @default(cuid())
+  name        String
+  tokenHash   String            @unique // sha256 dari token; token asli hanya diberikan sekali saat pairing
+  createdById String
+  createdAt   DateTime          @default(now()) @db.Timestamptz(3)
+  lastSeenAt  DateTime?         @db.Timestamptz(3)
+  revokedAt   DateTime?         @db.Timestamptz(3)
+  payments    IncomingPayment[]
+}
 
-  @@index([orderId])
+// Kode sekali pakai yang dibuat admin untuk menyambungkan HP kasir
+model PairingCode {
+  id          String    @id @default(cuid())
+  codeHash    String    @unique
+  createdById String
+  expiresAt   DateTime  @db.Timestamptz(3)
+  usedAt      DateTime? @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+}
+
+enum IncomingResult {
+  MATCHED // reservasi menunggu bayar → CONFIRMED
+  ALREADY_PAID // reservasi dengan nominal ini sudah lunas sebelumnya
+  LATE_SLOT_TAKEN // bayar terlambat, slot sudah diambil → batal + refund
+  NO_MATCH // tidak ada reservasi dengan nominal ini → admin perlu cek
+  DISMISSED // NO_MATCH yang sudah dicek admin
+}
+
+// Setiap notifikasi "Pembayaran Masuk" yang dilaporkan HP kasir
+model IncomingPayment {
+  id            String         @id @default(cuid())
+  deviceId      String
+  notifId       String // id notifikasi dari HP; bersama deviceId mencegah pemrosesan ganda
+  amount        Int
+  notifiedAt    DateTime       @db.Timestamptz(3) // waktu notifikasi muncul di HP
+  text          String
+  result        IncomingResult
+  reservationId String?
+  createdAt     DateTime       @default(now()) @db.Timestamptz(3)
+  device        PaymentDevice  @relation(fields: [deviceId], references: [id])
+
+  @@unique([deviceId, notifId])
+  @@index([result, createdAt])
 }
 
 model ActivityLog {

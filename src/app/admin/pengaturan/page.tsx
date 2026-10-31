@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QrisUpload } from "@/components/admin/QrisUpload";
+import { DevicesCard } from "@/components/admin/DevicesCard";
 
 interface SettingsData {
   openTime: string;
@@ -303,6 +304,8 @@ export default function AdminPengaturanPage() {
           </Button>
         </div>
       </form>
+
+      <DevicesCard />
     </div>
   );
 }

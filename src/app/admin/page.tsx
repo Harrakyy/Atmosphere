@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UnmatchedPayments } from "@/components/admin/UnmatchedPayments";
 
 interface ReservationListItem {
   id: string;
@@ -207,6 +208,8 @@ export default function AdminReservasiListPage() {
           </div>
         </div>
       )}
+
+      <UnmatchedPayments />
 
       {/* Filter Toolbar */}
       <div className="bg-white p-4 rounded-2xl border border-[#DFDDD6] shadow-xs flex flex-wrap items-center justify-between gap-4">
