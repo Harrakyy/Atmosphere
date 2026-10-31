@@ -187,6 +187,38 @@ model PaymentNotification {
   @@index([orderId])
 }
 
+// K-35: HP kasir (SetorPantau) yang boleh mengirim notifikasi DANA
+model Device {
+  id               String             @id @default(cuid())
+  name             String
+  pairingCode      String?            @unique // 8 karakter, sekali pakai
+  pairingExpiresAt DateTime?          @db.Timestamptz(3)
+  tokenHash        String?            @unique // sha256 dari token; token asli hanya ada di HP
+  pairedAt         DateTime?          @db.Timestamptz(3)
+  lastSeenAt       DateTime?          @db.Timestamptz(3)
+  revokedAt        DateTime?          @db.Timestamptz(3)
+  createdById      String
+  createdAt        DateTime           @default(now()) @db.Timestamptz(3)
+  notifications    QrisNotification[]
+}
+
+// Notifikasi "Pembayaran Masuk" dari HP kasir beserta hasil pencocokannya
+model QrisNotification {
+  id            String   @id @default(cuid())
+  deviceId      String
+  notifId       String // kunci anti-dobel dari HP
+  amount        Int
+  paidAt        DateTime @db.Timestamptz(3) // waktu notifikasi muncul di HP
+  text          String
+  result        String // MATCHED | ALREADY_PAID | LATE_SLOT_TAKEN | NO_MATCH
+  reservationId String?
+  receivedAt    DateTime @default(now()) @db.Timestamptz(3)
+  device        Device   @relation(fields: [deviceId], references: [id])
+
+  @@unique([deviceId, notifId])
+  @@index([amount])
+}
+
 model ActivityLog {
   id            String   @id @default(cuid())
   actorId       String? // null = sistem/webhook

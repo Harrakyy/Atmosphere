@@ -53,7 +53,7 @@ Migrasi data:
 - `UPDATE "Setting" SET "markupBps" = 0`
 - Partial unique index `reservation_pending_pay_amount`
 
-Tabel `PaymentNotification` **tetap ada** untuk Fase 2.
+Tabel `PaymentNotification` **tetap ada** (data lama Midtrans). Fase 2 memakai tabel baru `Device` + `QrisNotification` (K-35).
 
 ## 4. Perubahan API
 

@@ -252,3 +252,33 @@ POST {{baseUrl}}/api/admin/reservations/reservation_id_here/mark-paid
 
 ### Admin: Tolak klaim pembayaran (slot dilepas)
 POST {{baseUrl}}/api/admin/reservations/reservation_id_here/reject-payment
+
+### HP kasir (K-35) — Admin: buat kode pairing 8 karakter (berlaku 10 menit)
+POST {{baseUrl}}/api/admin/devices
+
+### Admin: daftar HP kasir yang terhubung / kode yang masih berlaku
+GET {{baseUrl}}/api/admin/devices
+
+### Admin: putuskan HP kasir (token langsung tidak berlaku)
+DELETE {{baseUrl}}/api/admin/devices/device_id_here
+
+### SetorPantau: tukar kode pairing dengan token perangkat
+POST {{baseUrl}}/api/devices/pair
+Content-Type: application/json
+
+{
+  "code": "ABCD2345",
+  "name": "HP Kasir"
+}
+
+### SetorPantau: kirim notifikasi "Pembayaran Masuk" → { result, reservationCode }
+POST {{baseUrl}}/api/payments/qris/notification
+Content-Type: application/json
+Authorization: Bearer device_token_here
+
+{
+  "notifId": "id.dana|1793465187826|Rp83.999 diterima DANA Bisnis.",
+  "amount": 83999,
+  "time": 1793465187826,
+  "text": "Rp83.999 diterima DANA Bisnis."
+}

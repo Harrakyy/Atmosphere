@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QrisUpload } from "@/components/admin/QrisUpload";
+import { CashierDevices } from "@/components/admin/CashierDevices";
 
 interface SettingsData {
   openTime: string;
@@ -303,6 +304,14 @@ export default function AdminPengaturanPage() {
           </Button>
         </div>
       </form>
+
+      {/* K-35: di luar form karena punya tombol sendiri dan tidak ikut "Simpan Pengaturan" */}
+      <section className="bg-white rounded-3xl p-6 md:p-8 border border-[#DFDDD6] shadow-xs text-xs">
+        <h2 className="text-sm font-bold text-[#1C2955] border-b border-gray-100 pb-2 mb-3">
+          Hubungkan HP Kasir (Pembayaran Otomatis)
+        </h2>
+        <CashierDevices />
+      </section>
     </div>
   );
 }
