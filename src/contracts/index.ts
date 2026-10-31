@@ -175,7 +175,6 @@ export const adminUpdateProductSchema = adminProductSchema.partial();
 export const adminUpdateSettingSchema = z.object({
   markupBps: z.number().int().min(0, "Markup minimal 0 bps").max(2000, "Markup maksimal 2000 bps").optional(),
   roundingUnit: z.number().int().positive().optional(),
-  vaMinTotal: z.number().int().min(0).optional(),
   openTime: z.string().regex(/^\d{2}:\d{2}$/, "Format jam harus HH:mm").optional(),
   closeTime: z.string().regex(/^\d{2}:\d{2}$/, "Format jam harus HH:mm").optional(),
   slotStepMinutes: z.number().int().positive().optional(),
@@ -186,7 +185,8 @@ export const adminUpdateSettingSchema = z.object({
   leadCutoffTime: z.string().regex(/^\d{2}:\d{2}$/, "Format jam harus HH:mm").optional(),
   maxAdvanceDays: z.number().int().positive().optional(),
   holdMinutes: z.number().int().positive().optional(),
-  paymentExpiryMinutes: z.number().int().positive().optional(),
+  claimHoldMinutes: z.number().int().positive().max(1440, "Maksimal 1440 menit (24 jam)").optional(),
+  qrisPayload: z.string().max(512, "Teks QRIS terlalu panjang").optional(),
   cafeWhatsapp: z
     .string()
     .regex(/^628\d{7,12}$/, "Nomor WhatsApp harus berformat 628... (R-D2)")

@@ -51,7 +51,7 @@ describe("wa.ts R-W1 to R-W4", () => {
       start,
       end,
       reason: "ada renovasi AC mendadak",
-      totalAmount: 150000,
+      paidAmount: 150000,
       refundAmount: 150000,
     });
 
@@ -73,7 +73,7 @@ describe("wa.ts R-W1 to R-W4", () => {
       start,
       end,
       reason: "jadwal meeting dibatalkan",
-      totalAmount: 150000,
+      paidAmount: 150000,
       refundAmount: 0,
     });
 

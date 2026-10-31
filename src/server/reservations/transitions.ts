@@ -93,6 +93,74 @@ export async function expireReservation(
   return updated;
 }
 
+// Admin sudah memastikan uang masuk (Fase 1), atau listener notifikasi mencocokkan nominal (Fase 2)
+export async function markPaid(
+  reservationId: string,
+  actorId: string | null,
+  now: Date = new Date(),
+  db = prisma
+) {
+  const payment = { paidAt: now, paymentType: "QRIS" };
+  try {
+    return await confirmReservation(reservationId, payment, actorId, db);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "";
+    if (!msg.includes("23P01") && !msg.includes("reservation_no_overlap")) throw err;
+    // Bayar terlambat dan slotnya sudah diambil orang lain: uang dikembalikan penuh
+    const cancelled = await cancelReservation(
+      reservationId,
+      { by: "SYSTEM", reason: "Slot sudah terisi saat pembayaran diterima terlambat" },
+      actorId,
+      now,
+      db
+    );
+    await db.activityLog.create({
+      data: { actorId, reservationId, action: "LATE_PAYMENT_SLOT_TAKEN" },
+    });
+    return cancelled;
+  }
+}
+
+// Admin tidak menemukan uang masuk: slot dilepas, klaim dihapus supaya keluar dari Perlu Tindakan
+export async function rejectPayment(reservationId: string, actorId: string, db = prisma) {
+  const res = await findOrThrow(db, reservationId);
+  // EXPIRED ikut boleh: klaim yang hold-nya sudah habis tetap muncul di Perlu Tindakan sampai ditolak
+  if (res.status !== "PENDING_PAYMENT" && res.status !== "EXPIRED") {
+    throw new InvalidTransitionError(`Hanya reservasi yang menunggu pembayaran yang bisa ditolak (status saat ini: ${res.status}).`);
+  }
+  const updated = await updateIfStatus(db, reservationId, res.status, {
+    status: "EXPIRED",
+    paymentClaimedAt: null,
+  });
+  await db.activityLog.create({
+    data: { actorId, reservationId, action: "PAYMENT_REJECTED", detail: { payAmount: res.payAmount } },
+  });
+  return updated;
+}
+
+// R-Q4: customer menyatakan sudah membayar → hold diperpanjang supaya admin sempat mengecek
+export async function claimPayment(ticketToken: string, now: Date = new Date(), db = prisma) {
+  const res = await db.reservation.findUnique({ where: { ticketToken } });
+  if (!res) throw new NotFoundError("Tiket reservasi tidak ditemukan.");
+  if (res.status !== "PENDING_PAYMENT" || res.holdExpiresAt <= now) {
+    throw new InvalidTransitionError("Reservasi ini tidak sedang menunggu pembayaran.");
+  }
+  if (res.paymentClaimedAt) return res;
+
+  const setting = await db.setting.findUnique({ where: { id: 1 } });
+  const extended = new Date(now.getTime() + (setting?.claimHoldMinutes ?? 120) * 60 * 1000);
+  const holdExpiresAt = extended > res.holdExpiresAt ? extended : res.holdExpiresAt;
+
+  const updated = await updateIfStatus(db, res.id, "PENDING_PAYMENT", {
+    paymentClaimedAt: now,
+    holdExpiresAt,
+  });
+  await db.activityLog.create({
+    data: { reservationId: res.id, action: "PAYMENT_CLAIMED", detail: { payAmount: res.payAmount } },
+  });
+  return updated;
+}
+
 export async function checkInReservation(
   reservationId: string,
   actorId: string,
@@ -218,15 +286,15 @@ export async function cancelReservation(
   }
 
   let finalRefundAmount = 0;
+  // R-Q5: refund dihitung dari uang yang benar-benar diterima (payAmount), bukan totalAmount
   if (input.by === "CAFE" || input.by === "SYSTEM") {
-    // Refund penuh
-    finalRefundAmount = res.totalAmount;
+    finalRefundAmount = res.payAmount;
   } else {
-    // CUSTOMER: refund diisi manual oleh admin (0..total)
+    // CUSTOMER: refund diisi manual oleh admin (0..payAmount)
     finalRefundAmount = input.refundAmount ?? 0;
-    if (finalRefundAmount < 0 || finalRefundAmount > res.totalAmount) {
+    if (finalRefundAmount < 0 || finalRefundAmount > res.payAmount) {
       throw new InvalidTransitionError(
-        `Nominal refund harus antara 0 dan ${res.totalAmount}.`
+        `Nominal refund harus antara 0 dan ${res.payAmount}.`
       );
     }
   }

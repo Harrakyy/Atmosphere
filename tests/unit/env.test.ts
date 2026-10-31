@@ -6,6 +6,5 @@ describe("Environment Variables Validation (env.ts)", () => {
     expect(env.DATABASE_URL).toBeDefined();
     expect(env.APP_URL).toBeDefined();
     expect(env.BETTER_AUTH_SECRET).toBeDefined();
-    expect(env.MIDTRANS_SERVER_KEY).toBeDefined();
   });
 });

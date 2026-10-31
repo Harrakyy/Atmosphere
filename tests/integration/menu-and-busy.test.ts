@@ -1,3 +1,4 @@
+import { setTestQris } from "../helpers/qris";
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/server/db";
 import { seed } from "../../prisma/seed";
@@ -16,6 +17,7 @@ describe("Menu and Day Busy Integration Tests", () => {
     await prisma.room.deleteMany();
     await prisma.setting.deleteMany();
     await seed(prisma);
+    await setTestQris(prisma);
   });
 
   it("getPublicMenu returns categories and active available products with online prices", async () => {
@@ -50,6 +52,7 @@ describe("Menu and Day Busy Integration Tests", () => {
         servingTime: "ON_ARRIVAL",
         status: "CONFIRMED",
         totalAmount: 50000,
+        payAmount: 50000,
         baseTotal: 48000,
         holdExpiresAt: new Date(),
       },

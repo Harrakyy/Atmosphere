@@ -1,8 +1,8 @@
+import { setTestQris, TEST_QRIS } from "../helpers/qris";
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/server/db";
 import { seed } from "../../prisma/seed";
 import { createReservation } from "@/server/reservations/create";
-import { FakeGateway } from "@/server/payments/fake";
 import { auth, seedAdminUser } from "@/server/auth";
 import {
   checkInReservation,
@@ -40,7 +40,6 @@ import { GET as getKitchenRoute } from "@/app/api/admin/kitchen/route";
 import { NextRequest } from "next/server";
 
 describe("Admin Backend Integration Tests (Day 2)", () => {
-  let fakeGateway: FakeGateway;
   let testRoomId: string;
   let foodProductId: string;
   let drinkProductId: string;
@@ -62,8 +61,7 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
     await prisma.user.deleteMany();
 
     await seed(prisma);
-
-    fakeGateway = new FakeGateway();
+    await setTestQris(prisma);
 
     const room = await prisma.room.findFirst({ where: { slug: "ruangan-1" } });
     testRoomId = room!.id;
@@ -110,7 +108,6 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
         },
       },
       {
-        gateway: fakeGateway,
         now: new Date("2026-10-10T10:00:00+07:00"),
         db: prisma,
       }
@@ -233,7 +230,7 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
     expect(cancelled.status).toBe("CANCELLED");
     expect(cancelled.cancelledBy).toBe("CAFE");
     expect(cancelled.refundStatus).toBe("PENDING");
-    expect(cancelled.refundAmount).toBe(res.totalAmount);
+    expect(cancelled.refundAmount).toBe(res.payAmount); // R-Q5: refund = uang yang benar-benar dibayar
 
     const detail = await getAdminReservationDetail(res.id, prisma);
     expect(detail.wa.cancelLink).toContain("Atmosphere");
@@ -342,7 +339,6 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
         },
       },
       {
-        gateway: fakeGateway,
         now: new Date("2026-10-10T10:00:00+07:00"),
         db: prisma,
       }
@@ -445,7 +441,6 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
         customer: { name: "Tamu 1", phone: "0812-1111-1111" },
       },
       {
-        gateway: fakeGateway,
         now: new Date("2026-10-10T10:00:00+07:00"),
         db: prisma,
       }
@@ -472,7 +467,6 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
         customer: { name: "Tamu 2", phone: "0812-2222-2222" },
       },
       {
-        gateway: fakeGateway,
         now: new Date("2026-10-10T10:00:00+07:00"),
         db: prisma,
       }
@@ -499,7 +493,6 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
         customer: { name: "Tamu 3", phone: "0812-3333-3333" },
       },
       {
-        gateway: fakeGateway,
         now: new Date("2026-10-10T10:00:00+07:00"),
         db: prisma,
       }
@@ -598,42 +591,30 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
   });
 
   // Settings validation
-  it("PATCH settings with paymentExpiryMinutes >= holdMinutes returns 400", async () => {
-    const invalidReq = new NextRequest("http://localhost:3000/api/admin/settings", {
-      method: "PATCH",
-      headers: { cookie: adminCookie },
-      body: JSON.stringify({
-        paymentExpiryMinutes: 20,
-        holdMinutes: 15,
-      }),
-    });
+  it("PATCH settings: QRIS divalidasi (R-Q1), partial invariant tetap dicek", async () => {
+    const patch = (body: object) =>
+      patchSettingsRoute(
+        new NextRequest("http://localhost:3000/api/admin/settings", {
+          method: "PATCH",
+          headers: { cookie: adminCookie },
+          body: JSON.stringify(body),
+        })
+      );
 
-    const res = await patchSettingsRoute(invalidReq);
-    expect(res.status).toBe(400);
-    const json = await res.json();
-    expect(json.success).toBe(false);
-    expect(json.error.code).toBe("VALIDATION_ERROR");
+    // QRIS dengan CRC rusak ditolak
+    const broken = await patch({ qrisPayload: TEST_QRIS.slice(0, -4) + "0000" });
+    expect(broken.status).toBe(400);
+    expect((await broken.json()).error.code).toBe("VALIDATION_ERROR");
 
-    // Valid update
-    const validReq = new NextRequest("http://localhost:3000/api/admin/settings", {
-      method: "PATCH",
-      headers: { cookie: adminCookie },
-      body: JSON.stringify({
-        markupBps: 400,
-        paymentExpiryMinutes: 10,
-        holdMinutes: 15,
-      }),
-    });
-    const validRes = await patchSettingsRoute(validReq);
-    expect(validRes.status).toBe(200);
+    // QRIS valid + perpanjangan klaim disimpan
+    const valid = await patch({ qrisPayload: TEST_QRIS, claimHoldMinutes: 90, markupBps: 0 });
+    expect(valid.status).toBe(200);
+    const saved = await getSettings(prisma);
+    expect(saved.qrisPayload).toBe(TEST_QRIS);
+    expect(saved.claimHoldMinutes).toBe(90);
 
-    // PATCH sebagian tetap dicek terhadap holdMinutes yang tersimpan (15)
-    const partialReq = new NextRequest("http://localhost:3000/api/admin/settings", {
-      method: "PATCH",
-      headers: { cookie: adminCookie },
-      body: JSON.stringify({ paymentExpiryMinutes: 20 }),
-    });
-    expect((await patchSettingsRoute(partialReq)).status).toBe(400);
+    // PATCH sebagian dicek terhadap nilai tersimpan
+    expect((await patch({ openTime: "23:00" })).status).toBe(400);
   });
 
   // Upload magic bytes validation
@@ -711,7 +692,7 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
       },
       prisma
     );
-    expect(newProd.onlinePrice).toBeGreaterThan(35000);
+    expect(newProd.onlinePrice).toBe(35000); // markup 0% (K-36)
 
     const updated = await updateProduct(newProd.id, { basePrice: 40000 }, prisma);
     expect(updated.basePrice).toBe(40000);
@@ -745,41 +726,6 @@ describe("Admin Backend Integration Tests (Day 2)", () => {
     expect(byStatus.some((r) => r.id === res.id)).toBe(true);
   });
 
-  // Unique item IDs for multi-option items in Midtrans
-  it("Cart with multiple options of same product passes unique IDs to PaymentGateway", async () => {
-    let capturedItems: { id: string; name: string }[] = [];
-    const spyGateway: FakeGateway = new FakeGateway();
-    spyGateway.createPayment = async (input) => {
-      capturedItems = input.items;
-      return { token: "tok", redirectUrl: "url" };
-    };
-
-    await createReservation(
-      {
-        roomId: testRoomId,
-        date: "2026-10-18",
-        start: "10:00",
-        end: "12:00",
-        guestCount: 5,
-        items: [
-          { productId: foodProductId, option: null, quantity: 2 },
-          { productId: drinkProductId, option: "Ice", quantity: 1 },
-          { productId: drinkProductId, option: "Hot", quantity: 1 },
-        ],
-        servingTime: "ON_ARRIVAL",
-        customer: { name: "Budi", phone: "0812-3456-7890" },
-      },
-      {
-        gateway: spyGateway,
-        now: new Date("2026-10-10T10:00:00+07:00"),
-        db: prisma,
-      }
-    );
-
-    const itemIds = capturedItems.map((i) => i.id);
-    const uniqueIds = new Set(itemIds);
-    expect(uniqueIds.size).toBe(itemIds.length);
-  });
 
   // Inverted room block dates
   it("Creating room block with endAt <= startAt fails validation with 400", async () => {

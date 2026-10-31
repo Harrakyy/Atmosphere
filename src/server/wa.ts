@@ -46,18 +46,18 @@ export function cancelLink(input: {
   start: Date;
   end: Date;
   reason?: string;
-  totalAmount: number;
+  paidAmount: number; // R-Q5: refund penuh = uang yang benar-benar dibayar
   refundAmount?: number;
 }): string {
   const jadwal = formatJadwal(input.start, input.end);
   const reasonText = input.reason ? ` karena ${input.reason}` : "";
-  const refundAmount = input.refundAmount ?? (input.by === "CAFE" ? input.totalAmount : 0);
+  const refundAmount = input.refundAmount ?? (input.by === "CAFE" ? input.paidAmount : 0);
 
   let text = `Halo Kak ${input.customerName}, kami dari Atmosphere Cafe.\n`;
 
   if (input.by === "CAFE" || input.by === "SYSTEM") {
     text += `Mohon maaf, reservasi ${input.code} di ${input.roomName} pada ${jadwal} terpaksa kami batalkan${reasonText}.\n`;
-    text += `Pembayaran sebesar ${formatRupiah(input.totalAmount)} akan kami refund penuh.\n`;
+    text += `Pembayaran sebesar ${formatRupiah(input.paidAmount)} akan kami refund penuh.\n`;
     text += `Mohon balas dengan: nama bank, nomor rekening, dan nama pemilik rekening. Terima kasih 🙏`;
   } else {
     text += `Sesuai permintaan Kakak, reservasi ${input.code} di ${input.roomName} pada ${jadwal} telah kami batalkan${reasonText}.`;

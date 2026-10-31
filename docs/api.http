@@ -58,20 +58,8 @@ Content-Type: application/json
   "phone": "0812-3456-7890"
 }
 
-### 7. Midtrans Webhook Notification
-POST {{baseUrl}}/api/payments/midtrans/notification
-Content-Type: application/json
-
-{
-  "order_id": "ATM-7K2F9Q",
-  "status_code": "200",
-  "gross_amount": "95000.00",
-  "signature_key": "YOUR_SHA512_SIGNATURE_KEY",
-  "transaction_status": "settlement",
-  "fraud_status": "accept",
-  "payment_type": "qris",
-  "transaction_time": "2026-10-10 10:15:00"
-}
+### 7. Customer klaim sudah bayar QRIS (R-Q4)
+POST {{baseUrl}}/api/tickets/{{createReservation.response.body.data.ticketToken}}/claim-payment
 
 
 ###############################################################################
@@ -259,3 +247,8 @@ Content-Type: image/jpeg
 < ./sample.jpg
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
+### Admin: Tandai Lunas setelah cek DANA (K-34)
+POST {{baseUrl}}/api/admin/reservations/reservation_id_here/mark-paid
+
+### Admin: Tolak klaim pembayaran (slot dilepas)
+POST {{baseUrl}}/api/admin/reservations/reservation_id_here/reject-payment

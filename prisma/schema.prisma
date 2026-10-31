@@ -41,23 +41,23 @@ enum RefundStatus {
 }
 
 model Setting {
-  id                   Int      @id @default(1)
-  markupBps            Int      @default(300)
-  roundingUnit         Int      @default(500)
-  vaMinTotal           Int      @default(150000)
-  openTime             String   @default("10:00") // HH:mm WIB
-  closeTime            String   @default("22:00")
-  slotStepMinutes      Int      @default(30)
-  minDurationMinutes   Int      @default(60)
-  maxDurationMinutes   Int      @default(240)
-  bufferMinutes        Int      @default(30)
-  leadDays             Int      @default(1)
-  leadCutoffTime       String   @default("21:00")
-  maxAdvanceDays       Int      @default(30)
-  holdMinutes          Int      @default(17)
-  paymentExpiryMinutes Int      @default(15)
-  cafeWhatsapp         String   @default("") // format 62…
-  updatedAt            DateTime @updatedAt @db.Timestamptz(3)
+  id                 Int      @id @default(1)
+  markupBps          Int      @default(0)
+  roundingUnit       Int      @default(500)
+  openTime           String   @default("10:00") // HH:mm WIB
+  closeTime          String   @default("22:00")
+  slotStepMinutes    Int      @default(30)
+  minDurationMinutes Int      @default(60)
+  maxDurationMinutes Int      @default(240)
+  bufferMinutes      Int      @default(30)
+  leadDays           Int      @default(1)
+  leadCutoffTime     String   @default("21:00")
+  maxAdvanceDays     Int      @default(30)
+  holdMinutes        Int      @default(17)
+  claimHoldMinutes   Int      @default(120) // perpanjangan waktu tahan setelah customer klaim sudah bayar
+  cafeWhatsapp       String   @default("") // format 62…
+  qrisPayload        String   @default("") // teks QRIS statis merchant (R-Q1)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
 }
 
 model Room {
@@ -121,40 +121,41 @@ model Product {
 }
 
 model Reservation {
-  id              String            @id @default(cuid())
-  code            String            @unique
-  ticketToken     String            @unique
-  roomId          String
-  startAt         DateTime          @db.Timestamptz(3)
-  endAt           DateTime          @db.Timestamptz(3)
-  blockEndAt      DateTime          @db.Timestamptz(3) // endAt + buffer
-  guestCount      Int
-  customerName    String
-  customerPhone   String // sudah dinormalisasi 62…
-  customerEmail   String?
-  servingTime     ServingTime
-  servingAt       DateTime?         @db.Timestamptz(3)
-  kitchenNote     String?
-  status          ReservationStatus @default(PENDING_PAYMENT)
-  totalAmount     Int // harga online
-  baseTotal       Int // harga kasir (untuk info)
-  holdExpiresAt   DateTime          @db.Timestamptz(3)
-  snapToken       String?
-  snapRedirectUrl String?
-  paymentType     String?
-  paidAt          DateTime?         @db.Timestamptz(3)
-  checkedInAt     DateTime?         @db.Timestamptz(3)
-  completedAt     DateTime?         @db.Timestamptz(3)
-  cancelledAt     DateTime?         @db.Timestamptz(3)
-  cancelledBy     CancelledBy?
-  cancelReason    String?
-  refundStatus    RefundStatus      @default(NONE)
-  refundAmount    Int               @default(0)
-  refundNote      String?
-  createdAt       DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime          @updatedAt @db.Timestamptz(3)
-  room            Room              @relation(fields: [roomId], references: [id])
-  items           ReservationItem[]
+  id               String            @id @default(cuid())
+  code             String            @unique
+  ticketToken      String            @unique
+  roomId           String
+  startAt          DateTime          @db.Timestamptz(3)
+  endAt            DateTime          @db.Timestamptz(3)
+  blockEndAt       DateTime          @db.Timestamptz(3) // endAt + buffer
+  guestCount       Int
+  customerName     String
+  customerPhone    String // sudah dinormalisasi 62…
+  customerEmail    String?
+  servingTime      ServingTime
+  servingAt        DateTime?         @db.Timestamptz(3)
+  kitchenNote      String?
+  status           ReservationStatus @default(PENDING_PAYMENT)
+  totalAmount      Int // harga online
+  baseTotal        Int // harga kasir (untuk info)
+  holdExpiresAt    DateTime          @db.Timestamptz(3)
+  payAmount        Int // totalAmount − uniqueDiscount, nominal yang benar-benar dibayar (R-Q3)
+  uniqueDiscount   Int               @default(0)
+  paymentClaimedAt DateTime?         @db.Timestamptz(3)
+  paymentType      String?
+  paidAt           DateTime?         @db.Timestamptz(3)
+  checkedInAt      DateTime?         @db.Timestamptz(3)
+  completedAt      DateTime?         @db.Timestamptz(3)
+  cancelledAt      DateTime?         @db.Timestamptz(3)
+  cancelledBy      CancelledBy?
+  cancelReason     String?
+  refundStatus     RefundStatus      @default(NONE)
+  refundAmount     Int               @default(0)
+  refundNote       String?
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
+  room             Room              @relation(fields: [roomId], references: [id])
+  items            ReservationItem[]
 
   @@index([roomId, startAt])
   @@index([status, startAt])
@@ -246,4 +247,3 @@ model Verification {
   createdAt  DateTime? @default(now()) @db.Timestamptz(3)
   updatedAt  DateTime? @updatedAt @db.Timestamptz(3)
 }
-

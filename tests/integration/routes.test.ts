@@ -1,3 +1,7 @@
+import { todayWib, wibDateTime } from "@/server/time";
+// Tanggal pemesanan selalu di masa depan supaya tes tidak kedaluwarsa (R-T4/R-T5)
+const BOOK_DATE = todayWib(new Date(wibDateTime(todayWib(new Date()), "12:00").getTime() + 3 * 86400000));
+import { setTestQris } from "../helpers/qris";
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/server/db";
 import { seed } from "../../prisma/seed";
@@ -7,7 +11,7 @@ import { GET as getDayBusyRoute } from "@/app/api/availability/day/route";
 import { POST as createReservationRoute } from "@/app/api/reservations/route";
 import { GET as getTicketRoute } from "@/app/api/tickets/[token]/route";
 import { POST as lookupTicketRoute } from "@/app/api/tickets/lookup/route";
-import { POST as notificationRoute } from "@/app/api/payments/midtrans/notification/route";
+import { POST as claimPaymentRoute } from "@/app/api/tickets/[token]/claim-payment/route";
 import { NextRequest } from "next/server";
 
 describe("End-to-End API Routes (Hari 1)", () => {
@@ -26,6 +30,7 @@ describe("End-to-End API Routes (Hari 1)", () => {
     await prisma.setting.deleteMany();
 
     await seed(prisma);
+    await setTestQris(prisma);
 
     const room = await prisma.room.findFirst({ where: { slug: "ruangan-1" } });
     roomId = room!.id;
@@ -47,13 +52,13 @@ describe("End-to-End API Routes (Hari 1)", () => {
       (c: { name: string; products: { price: number }[] }) => c.name === "Makanan"
     );
     expect(makanan.products.length).toBeGreaterThan(0);
-    expect(makanan.products[0].price).toBe(28000); // 27000 -> 28000
+    expect(makanan.products[0].price).toBe(27000); // markup 0% (K-36)
   });
 
   it("GET /api/availability returns room status and enforces rules", async () => {
     // Valid query for date far in future within 30 days
     const req = new NextRequest(
-      "http://localhost:3000/api/availability?date=2026-10-18&start=10:00&end=12:00&guests=4"
+      `http://localhost:3000/api/availability?date=${BOOK_DATE}&start=10:00&end=12:00&guests=4`
     );
     const res = await getAvailabilityRoute(req);
     expect(res.status).toBe(200);
@@ -78,7 +83,7 @@ describe("End-to-End API Routes (Hari 1)", () => {
 
   it("GET /api/availability/day returns busy blocks", async () => {
     const req = new NextRequest(
-      `http://localhost:3000/api/availability/day?roomId=${roomId}&date=2026-10-18`
+      `http://localhost:3000/api/availability/day?roomId=${roomId}&date=${BOOK_DATE}`
     );
     const res = await getDayBusyRoute(req);
     expect(res.status).toBe(200);
@@ -93,7 +98,7 @@ describe("End-to-End API Routes (Hari 1)", () => {
       method: "POST",
       body: JSON.stringify({
         roomId,
-        date: "2026-10-18",
+        date: `${BOOK_DATE}`,
         start: "10:00",
         end: "12:00",
         guestCount: 4,
@@ -115,11 +120,11 @@ describe("End-to-End API Routes (Hari 1)", () => {
     expect(createRes.status).toBe(201);
     const createJson = await createRes.json();
     expect(createJson.success).toBe(true);
-    const { code, ticketToken, snapToken, totalAmount } = createJson.data;
+    const { code, ticketToken, payAmount, totalAmount } = createJson.data;
     expect(code).toMatch(/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}$/);
     expect(ticketToken).toBeDefined();
-    expect(snapToken).toContain("fake_snap_token_");
-    expect(totalAmount).toBe(87000);
+    expect(payAmount).toBe(totalAmount - 1); // R-Q3
+    expect(totalAmount).toBe(84000);
 
     // 2. Retrieve ticket by token
     const ticketRes = await getTicketRoute(
@@ -131,7 +136,8 @@ describe("End-to-End API Routes (Hari 1)", () => {
     expect(ticketJson.success).toBe(true);
     expect(ticketJson.data.code).toBe(code);
     expect(ticketJson.data.status).toBe("PENDING_PAYMENT");
-    expect(ticketJson.data.snapToken).toBe(snapToken);
+    expect(ticketJson.data.payAmount).toBe(payAmount);
+    expect(ticketJson.data.qris).toMatch(/^000201010212/);
     expect(ticketJson.data.wa.saveLink).toContain("wa.me");
 
     // 3. Lookup ticket by code & phone
@@ -178,7 +184,7 @@ describe("End-to-End API Routes (Hari 1)", () => {
       method: "POST",
       body: JSON.stringify({
         roomId,
-        date: "2026-10-18",
+        date: `${BOOK_DATE}`,
         start: "10:00",
         end: "12:00",
         guestCount: 4,
@@ -223,7 +229,7 @@ describe("End-to-End API Routes (Hari 1)", () => {
       method: "POST",
       body: JSON.stringify({
         roomId,
-        date: "2026-10-18",
+        date: `${BOOK_DATE}`,
         start: "10:00",
         end: "12:00",
         guestCount: 4,
@@ -238,13 +244,13 @@ describe("End-to-End API Routes (Hari 1)", () => {
     expect((await res.json()).error.code).toBe("VALIDATION_ERROR");
   });
 
-  it("POST /api/payments/midtrans/notification handles webhook and updates status", async () => {
+  it("POST /api/tickets/[token]/claim-payment menandai klaim tanpa melunasi (R-Q4)", async () => {
     // 1. Create a reservation first
     const createReq = new NextRequest("http://localhost:3000/api/reservations", {
       method: "POST",
       body: JSON.stringify({
         roomId,
-        date: "2026-10-18",
+        date: `${BOOK_DATE}`,
         start: "14:00",
         end: "16:00",
         guestCount: 4,
@@ -258,27 +264,16 @@ describe("End-to-End API Routes (Hari 1)", () => {
       headers: { "Content-Type": "application/json" },
     });
     const createRes = await createReservationRoute(createReq);
-    const { code, totalAmount } = (await createRes.json()).data;
+    const { code, ticketToken } = (await createRes.json()).data;
 
-    // 2. Send webhook notification
-    const notifyReq = new NextRequest("http://localhost:3000/api/payments/midtrans/notification", {
-      method: "POST",
-      body: JSON.stringify({
-        order_id: code,
-        gross_amount: totalAmount,
-        payment_type: "other_qris",
-        transaction_status: "settlement",
-      }),
-      headers: { "Content-Type": "application/json" },
-    });
-    const notifyRes = await notificationRoute(notifyReq);
-    expect(notifyRes.status).toBe(200);
-    const notifyJson = await notifyRes.json();
-    expect(notifyJson.success).toBe(true);
-    expect(notifyJson.data.received).toBe(true);
-
-    // 3. Confirm reservation status is now CONFIRMED
+    // 2. Customer klaim sudah bayar (R-Q4): hold diperpanjang, belum lunas sampai admin cek
+    const claimRes = await claimPaymentRoute(
+      new NextRequest(`http://localhost:3000/api/tickets/${ticketToken}/claim-payment`, { method: "POST" }),
+      { params: Promise.resolve({ token: ticketToken }) }
+    );
+    expect(claimRes.status).toBe(200);
     const updated = await prisma.reservation.findUnique({ where: { code } });
-    expect(updated?.status).toBe("CONFIRMED");
+    expect(updated?.paymentClaimedAt).not.toBeNull();
+    expect(updated?.status).toBe("PENDING_PAYMENT");
   });
 });

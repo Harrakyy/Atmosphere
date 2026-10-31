@@ -1,22 +1,19 @@
 import { prisma } from "../db";
-import { PaymentGateway } from "../payments/gateway";
-import { getPaymentGateway } from "../payments/notification";
 import { validateSchedule } from "../time-rules";
 import { validateCart, CartItemInput, ProductWithCategory } from "../cart";
 import { normalizePhone } from "../phone";
-import { generateCode, generateTicketToken, toOrderId } from "../codes";
-import { enabledPayments } from "../pricing";
+import { generateCode, generateTicketToken } from "../codes";
 import {
   AppError,
   SlotTakenError,
   TimeRuleError,
   CartRuleError,
   RoomUnavailableError,
-  PaymentGatewayError,
+  PaymentNotConfiguredError,
   CodeCollisionError,
 } from "../http";
 import { wibDateTime } from "../time";
-import { ServingTime, Reservation, Prisma } from "@prisma/client";
+import { ServingTime, Prisma } from "@prisma/client";
 
 export interface CreateReservationInput {
   roomId: string;
@@ -39,21 +36,19 @@ export interface CreateReservationResult {
   code: string;
   ticketToken: string;
   totalAmount: number;
+  uniqueDiscount: number;
+  payAmount: number;
   holdExpiresAt: Date;
-  snapToken: string;
-  snapRedirectUrl: string;
 }
 
 export async function createReservation(
   input: CreateReservationInput,
   deps: {
-    gateway?: PaymentGateway;
     now?: Date;
     db?: typeof prisma;
   } = {}
 ): Promise<CreateReservationResult> {
   const db = deps.db ?? prisma;
-  const gateway = deps.gateway ?? getPaymentGateway();
   const now = deps.now ?? new Date();
 
   // 1. Validasi Input Customer (R-D1 - R-D5)
@@ -164,177 +159,149 @@ export async function createReservation(
     throw new CartRuleError(cart.error);
   }
 
-  const holdMinutes = setting?.holdMinutes ?? 17;
+  // R-Q7: tanpa QRIS cafe, customer tidak punya cara membayar
+  if (!setting?.qrisPayload) {
+    throw new PaymentNotConfiguredError();
+  }
+
+  const holdMinutes = setting.holdMinutes;
   const holdExpiresAt = new Date(now.getTime() + holdMinutes * 60 * 1000);
 
-  // 5. Transaksi Database dengan Row Lock dan Lazy Expiry
-  let createdReservation: Reservation;
+  // Dua request bersamaan bisa memilih kode atau nominal unik yang sama; unique index menolak salah satunya, ulangi
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const reservation = await db.$transaction(async (tx) => {
+        // Row lock ruangan: SELECT … FROM "Room" WHERE id=$1 FOR UPDATE
+        await tx.$queryRawUnsafe(`SELECT 1 FROM "Room" WHERE id = $1 FOR UPDATE`, input.roomId);
 
-  try {
-    createdReservation = await db.$transaction(async (tx) => {
-      // Row lock ruangan: SELECT … FROM "Room" WHERE id=$1 FOR UPDATE
-      await tx.$queryRawUnsafe(`SELECT 1 FROM "Room" WHERE id = $1 FOR UPDATE`, input.roomId);
+        // Lazy expiry di semua ruangan: hold kedaluwarsa juga melepas nominal unik yang dipegangnya
+        await tx.reservation.updateMany({
+          where: { status: "PENDING_PAYMENT", holdExpiresAt: { lte: now } },
+          data: { status: "EXPIRED" },
+        });
 
-      // Lazy expiry: PENDING_PAYMENT yang sudah lewat batas hold diubah jadi EXPIRED
-      await tx.reservation.updateMany({
-        where: {
-          roomId: input.roomId,
-          status: "PENDING_PAYMENT",
-          holdExpiresAt: { lte: now },
-        },
-        data: { status: "EXPIRED" },
-      });
-
-      // Cek blokir ruangan (R-A4)
-      const blocks = await tx.roomBlock.findMany({
-        where: {
-          roomId: input.roomId,
-          startAt: { lt: endAt },
-          OR: [{ endAt: null }, { endAt: { gt: startAt } }],
-        },
-      });
-
-      if (blocks.length > 0) {
-        throw new RoomUnavailableError(
-          "Ruangan sedang tidak dapat dipesan pada jam tersebut karena pemeliharaan / blokir jadwal."
-        );
-      }
-
-      // Generate unique code & ticketToken: semua percobaan dicek, tidak ada kode yang dipakai tanpa dicek
-      let code = "";
-      for (let attempt = 0; attempt < 5 && !code; attempt++) {
-        const candidate = generateCode();
-        if (!(await tx.reservation.findUnique({ where: { code: candidate } }))) code = candidate;
-      }
-      if (!code) throw new CodeCollisionError();
-
-      const ticketToken = generateTicketToken();
-
-      const reservation = await tx.reservation.create({
-        data: {
-          code,
-          ticketToken,
-          roomId: input.roomId,
-          startAt,
-          endAt,
-          blockEndAt,
-          guestCount: input.guestCount,
-          customerName,
-          customerPhone,
-          customerEmail,
-          servingTime: input.servingTime as ServingTime,
-          servingAt: servingAtDate,
-          kitchenNote,
-          status: "PENDING_PAYMENT",
-          totalAmount: cart.totalAmount,
-          baseTotal: cart.baseTotal,
-          holdExpiresAt,
-          items: {
-            create: cart.items.map((i) => ({
-              productId: i.productId,
-              productName: i.productName,
-              option: i.option,
-              kind: i.kind,
-              unitPrice: i.unitPrice,
-              basePrice: i.basePrice,
-              quantity: i.quantity,
-              lineTotal: i.lineTotal,
-            })),
+        // Cek blokir ruangan (R-A4)
+        const blocks = await tx.roomBlock.findMany({
+          where: {
+            roomId: input.roomId,
+            startAt: { lt: endAt },
+            OR: [{ endAt: null }, { endAt: { gt: startAt } }],
           },
-        },
-      });
+        });
 
-      await tx.activityLog.create({
-        data: {
-          reservationId: reservation.id,
-          action: "RESERVATION_CREATED",
-          detail: {
-            code: reservation.code,
-            totalAmount: reservation.totalAmount,
-            guestCount: reservation.guestCount,
+        if (blocks.length > 0) {
+          throw new RoomUnavailableError(
+            "Ruangan sedang tidak dapat dipesan pada jam tersebut karena pemeliharaan / blokir jadwal."
+          );
+        }
+
+        // Generate unique code & ticketToken: semua percobaan dicek, tidak ada kode yang dipakai tanpa dicek
+        let code = "";
+        for (let i = 0; i < 5 && !code; i++) {
+          const candidate = generateCode();
+          if (!(await tx.reservation.findUnique({ where: { code: candidate } }))) code = candidate;
+        }
+        if (!code) throw new CodeCollisionError();
+
+        const uniqueDiscount = await pickUniqueDiscount(tx, cart.totalAmount, now);
+
+        const created = await tx.reservation.create({
+          data: {
+            code,
+            ticketToken: generateTicketToken(),
+            roomId: input.roomId,
+            startAt,
+            endAt,
+            blockEndAt,
+            guestCount: input.guestCount,
+            customerName,
+            customerPhone,
+            customerEmail,
+            servingTime: input.servingTime as ServingTime,
+            servingAt: servingAtDate,
+            kitchenNote,
+            status: "PENDING_PAYMENT",
+            totalAmount: cart.totalAmount,
+            baseTotal: cart.baseTotal,
+            uniqueDiscount,
+            payAmount: cart.totalAmount - uniqueDiscount,
+            holdExpiresAt,
+            items: {
+              create: cart.items.map((i) => ({
+                productId: i.productId,
+                productName: i.productName,
+                option: i.option,
+                kind: i.kind,
+                unitPrice: i.unitPrice,
+                basePrice: i.basePrice,
+                quantity: i.quantity,
+                lineTotal: i.lineTotal,
+              })),
+            },
           },
-        },
+        });
+
+        await tx.activityLog.create({
+          data: {
+            reservationId: created.id,
+            action: "RESERVATION_CREATED",
+            detail: {
+              code: created.code,
+              totalAmount: created.totalAmount,
+              payAmount: created.payAmount,
+              guestCount: created.guestCount,
+            },
+          },
+        });
+
+        return created;
       });
 
-      return reservation;
-    });
-  } catch (err: unknown) {
-    if (err instanceof AppError) throw err;
-    const msg = err instanceof Error ? err.message : "";
-    // Dua request bersamaan memilih kode yang sama di antara pengecekan dan insert
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      throw new CodeCollisionError();
-    }
-    // Tangkap exclusion constraint violation (Postgres error 23P01)
-    if (msg.includes("23P01") || msg.includes("reservation_no_overlap")) {
-      throw new SlotTakenError();
-    }
-    throw err;
-  }
-
-  // 6. Di luar transaksi: Payment Gateway Snap Creation
-  try {
-    const paymentItems = cart.items.map((item, idx) => {
-      const itemFullName = item.option
-        ? `${item.productName} (${item.option})`
-        : item.productName;
-      const uniqueId = item.option
-        ? `${item.productId}-${item.option}`
-        : `${item.productId}-${idx}`;
       return {
-        id: uniqueId.slice(0, 50),
-        name: itemFullName.slice(0, 50),
-        price: item.unitPrice,
-        quantity: item.quantity,
+        code: reservation.code,
+        ticketToken: reservation.ticketToken,
+        totalAmount: reservation.totalAmount,
+        uniqueDiscount: reservation.uniqueDiscount,
+        payAmount: reservation.payAmount,
+        holdExpiresAt,
       };
-    });
-
-    const paymentMethods = enabledPayments(cart.totalAmount, setting ?? {});
-    const payment = await gateway.createPayment({
-      orderId: toOrderId(createdReservation.code),
-      amount: cart.totalAmount,
-      items: paymentItems,
-      customer: {
-        name: customerName,
-        phone: customerPhone,
-        email: customerEmail || undefined,
-      },
-      enabledPayments: paymentMethods,
-      expiryMinutes: setting?.paymentExpiryMinutes ?? 15,
-    });
-
-    await db.reservation.update({
-      where: { id: createdReservation.id },
-      data: {
-        snapToken: payment.token,
-        snapRedirectUrl: payment.redirectUrl,
-      },
-    });
-
-    return {
-      code: createdReservation.code,
-      ticketToken: createdReservation.ticketToken,
-      totalAmount: createdReservation.totalAmount,
-      holdExpiresAt,
-      snapToken: payment.token,
-      snapRedirectUrl: payment.redirectUrl,
-    };
-  } catch (gwError: unknown) {
-    // Kalau payment gateway gagal: ubah status jadi EXPIRED, slot dilepas, catat log, lempar 502
-    await db.reservation.update({
-      where: { id: createdReservation.id },
-      data: { status: "EXPIRED" },
-    });
-
-    const errorMsg = gwError instanceof Error ? gwError.message : "Unknown payment error";
-    await db.activityLog.create({
-      data: {
-        reservationId: createdReservation.id,
-        action: "PAYMENT_GATEWAY_ERROR",
-        detail: { error: errorMsg },
-      },
-    });
-
-    throw new PaymentGatewayError("Gagal menghubungi layanan pembayaran. Silakan coba kembali.");
+    } catch (err: unknown) {
+      if (err instanceof AppError) throw err;
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") continue;
+      const msg = err instanceof Error ? err.message : "";
+      // Tangkap exclusion constraint violation (Postgres error 23P01)
+      if (msg.includes("23P01") || msg.includes("reservation_no_overlap")) {
+        throw new SlotTakenError();
+      }
+      throw err;
+    }
   }
+  throw new CodeCollisionError();
+}
+
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+// R-Q3: k terkecil yang belum dipakai. Reservasi kedaluwarsa ≤24 jam ikut dihindari supaya bayar terlambat tidak tertukar.
+async function pickUniqueDiscount(tx: Tx, totalAmount: number, now: Date): Promise<number> {
+  const maxK = Math.min(999, totalAmount - 1);
+  const recent = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const used = await tx.reservation.findMany({
+    where: {
+      payAmount: { gte: totalAmount - maxK, lt: totalAmount },
+      OR: [
+        { status: "PENDING_PAYMENT" },
+        { status: "EXPIRED", holdExpiresAt: { gte: recent } },
+      ],
+    },
+    select: { payAmount: true },
+  });
+  const taken = new Set(used.map((r) => totalAmount - r.payAmount));
+  for (let k = 1; k <= maxK; k++) {
+    if (!taken.has(k)) return k;
+  }
+  throw new AppError(
+    "PAYMENT_BUSY",
+    "Terlalu banyak pembayaran yang sedang menunggu. Silakan coba lagi beberapa menit lagi.",
+    503
+  );
 }

@@ -8,12 +8,13 @@ import { formatRupiah, formatDateIndo, formatTimeRange, getStatusInfo } from "@/
 import { downloadCodeCard } from "@/lib/code-card";
 import { formatJadwal } from "@/server/time";
 import { toast } from "sonner";
-import { AlertTriangle, Check, Copy, CreditCard, Download, Loader2, MessageCircle, Phone, Search } from "lucide-react";
+import { AlertTriangle, Check, Copy, Download, MessageCircle, Phone, Search } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QrisPayment } from "@/components/QrisPayment";
 
 interface TicketData {
   code: string;
@@ -42,8 +43,10 @@ interface TicketData {
   servingAt: string | null;
   kitchenNote: string | null;
   holdExpiresAt: string;
-  snapToken: string | null;
-  snapRedirectUrl: string | null;
+  uniqueDiscount: number;
+  payAmount: number;
+  paymentClaimedAt: string | null;
+  qris: string | null;
   wa: {
     saveLink: string;
     contactCafeLink: string;
@@ -86,13 +89,13 @@ export default function TiketPage({
     fetchTicket();
   }, [fetchTicket]);
 
-  // Polling jika status masih PENDING_PAYMENT (cek setiap 3 detik, max 2 menit = 40x)
+  // Polling selama menunggu bayar; konfirmasi admin bisa makan waktu (cek tiap 10 detik, maks 1 jam = 360x)
   useEffect(() => {
     if (!ticket || ticket.status !== "PENDING_PAYMENT") return;
 
     const interval = setInterval(async () => {
       pollCountRef.current += 1;
-      if (pollCountRef.current > 40) {
+      if (pollCountRef.current > 360) {
         clearInterval(interval);
         return;
       }
@@ -100,14 +103,14 @@ export default function TiketPage({
       try {
         const res = await fetch(`/api/tickets/${token}`);
         const json = await res.json();
-        if (json.success && json.data.status !== "PENDING_PAYMENT") {
+        if (json.success && (json.data.status !== "PENDING_PAYMENT" || json.data.paymentClaimedAt !== ticket.paymentClaimedAt)) {
           setTicket(json.data);
           clearInterval(interval);
         }
       } catch {
         // ignore polling errors
       }
-    }, 3000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [ticket, token]);
@@ -207,22 +210,19 @@ export default function TiketPage({
                 )}
               </div>
 
-              {/* Status Pending Payment notice */}
-              {ticket.status === "PENDING_PAYMENT" && (
-                <Alert className="mt-5 max-w-md border-amber-200 bg-amber-50 text-amber-800 text-left" aria-live="polite">
-                  <Loader2 className="animate-spin" />
-                  <AlertTitle>Menunggu konfirmasi pembayaran...</AlertTitle>
-                  <AlertDescription className="text-amber-700">
-                    Halaman ini akan otomatis terbarui saat pembayaran berhasil diverifikasi.
-                    {ticket.snapRedirectUrl && (
-                      <Button asChild size="sm" className="mt-2">
-                        <a href={ticket.snapRedirectUrl} target="_blank" rel="noopener noreferrer">
-                          <CreditCard /> Buka Pembayaran
-                        </a>
-                      </Button>
-                    )}
-                  </AlertDescription>
-                </Alert>
+              {/* Pembayaran QRIS (R-Q2, R-Q4) */}
+              {ticket.status === "PENDING_PAYMENT" && ticket.qris && (
+                <QrisPayment
+                  token={token}
+                  code={ticket.code}
+                  qris={ticket.qris}
+                  totalAmount={ticket.totalAmount}
+                  uniqueDiscount={ticket.uniqueDiscount}
+                  payAmount={ticket.payAmount}
+                  holdExpiresAt={ticket.holdExpiresAt}
+                  paymentClaimedAt={ticket.paymentClaimedAt}
+                  onChanged={fetchTicket}
+                />
               )}
 
               {/* Action Buttons: WA & Unduh Kode */}
@@ -296,8 +296,10 @@ export default function TiketPage({
                 </div>
 
                 <div className="mt-3 flex items-center justify-between p-3 bg-primary/5 rounded-xl">
-                  <span className="text-xs font-bold">Total Pre-Order:</span>
-                  <span className="text-base font-extrabold">{formatRupiah(ticket.totalAmount)}</span>
+                  <span className="text-xs font-bold">
+                    {ticket.uniqueDiscount > 0 ? `Dibayar (diskon kode unik −${formatRupiah(ticket.uniqueDiscount)}):` : "Total Pre-Order:"}
+                  </span>
+                  <span className="text-base font-extrabold">{formatRupiah(ticket.payAmount)}</span>
                 </div>
               </div>
             </Card>

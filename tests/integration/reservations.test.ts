@@ -1,20 +1,18 @@
+import { setTestQris } from "../helpers/qris";
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/server/db";
 import { seed } from "../../prisma/seed";
 import { createReservation } from "@/server/reservations/create";
 import { getAvailability } from "@/server/availability";
 import { getTicketByToken, lookupTicket } from "@/server/reservations/queries";
-import { FakeGateway } from "@/server/payments/fake";
 import {
   SlotTakenError,
   TimeRuleError,
   RoomUnavailableError,
-  PaymentGatewayError,
 } from "@/server/http";
 import { wibDateTime } from "@/server/time";
 
 describe("Reservations Integration Tests (Day 1)", () => {
-  let fakeGateway: FakeGateway;
   let testRoomId: string;
   let foodProductId: string;
   let drinkProductId: string;
@@ -31,8 +29,7 @@ describe("Reservations Integration Tests (Day 1)", () => {
     await prisma.setting.deleteMany();
 
     await seed(prisma);
-
-    fakeGateway = new FakeGateway();
+    await setTestQris(prisma);
 
     const room = await prisma.room.findFirst({ where: { slug: "ruangan-1" } });
     testRoomId = room!.id;
@@ -70,13 +67,14 @@ describe("Reservations Integration Tests (Day 1)", () => {
         roomId: testRoomId,
         items: getValidItems(),
       },
-      { gateway: fakeGateway, now: fixedNow, db: prisma }
+      { now: fixedNow, db: prisma }
     );
 
     expect(result.code).toMatch(/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}$/);
     expect(result.ticketToken).toHaveLength(32);
-    // FakeGateway membentuk snapToken dari orderId, jadi ini sekaligus membuktikan order_id bersufiks (R-I3)
-    expect(result.snapToken).toMatch(new RegExp(`^fake_snap_token_${result.code}-[0-9a-f]{8}$`));
+    // R-Q3: nominal unik pertama = total − Rp1
+    expect(result.uniqueDiscount).toBe(1);
+    expect(result.payAmount).toBe(result.totalAmount - 1);
 
     // Verify database record
     const saved = await prisma.reservation.findUnique({
@@ -89,9 +87,9 @@ describe("Reservations Integration Tests (Day 1)", () => {
     expect(saved?.customerPhone).toBe("6281234567890");
     expect(saved?.items).toHaveLength(2);
 
-    // Verify snapshot: 2 * 28000 + 2 * 15500 = 56000 + 31000 = 87000
-    expect(saved?.totalAmount).toBe(87000);
-    expect(result.totalAmount).toBe(87000);
+    // Verify snapshot (markup 0%, K-36): 2 * 27000 + 2 * 15000 = 84000
+    expect(saved?.totalAmount).toBe(84000);
+    expect(result.totalAmount).toBe(84000);
 
     // Verify ticket query
     const ticket = await getTicketByToken(result.ticketToken, fixedNow);
@@ -122,8 +120,8 @@ describe("Reservations Integration Tests (Day 1)", () => {
     };
 
     const results = await Promise.allSettled([
-      createReservation(payloadA, { gateway: fakeGateway, now: fixedNow, db: prisma }),
-      createReservation(payloadB, { gateway: fakeGateway, now: fixedNow, db: prisma }),
+      createReservation(payloadA, { now: fixedNow, db: prisma }),
+      createReservation(payloadB, { now: fixedNow, db: prisma }),
     ]);
 
     const fulfilled = results.filter((r) => r.status === "fulfilled");
@@ -146,7 +144,7 @@ describe("Reservations Integration Tests (Day 1)", () => {
         roomId: testRoomId,
         items: getValidItems(),
       },
-      { gateway: fakeGateway, now: fixedNow, db: prisma }
+      { now: fixedNow, db: prisma }
     );
 
     // Booking starting at 12:00 (within 30-min buffer) must be rejected
@@ -159,7 +157,7 @@ describe("Reservations Integration Tests (Day 1)", () => {
           end: "13:30",
           items: getValidItems(),
         },
-        { gateway: fakeGateway, now: fixedNow, db: prisma }
+        { now: fixedNow, db: prisma }
       )
     ).rejects.toThrow(SlotTakenError);
 
@@ -172,7 +170,7 @@ describe("Reservations Integration Tests (Day 1)", () => {
         end: "14:00",
         items: getValidItems(),
       },
-      { gateway: fakeGateway, now: fixedNow, db: prisma }
+      { now: fixedNow, db: prisma }
     );
     expect(okBooking.code).toBeDefined();
   });
@@ -186,7 +184,7 @@ describe("Reservations Integration Tests (Day 1)", () => {
         roomId: testRoomId,
         items: getValidItems(),
       },
-      { gateway: fakeGateway, now: pastNow, db: prisma }
+      { now: pastNow, db: prisma }
     );
 
     // Before hold expires (e.g. at 10:05), room availability returns BOOKED
@@ -219,7 +217,7 @@ describe("Reservations Integration Tests (Day 1)", () => {
         items: getValidItems(),
         customer: { name: "Customer Baru", phone: "08198765432" },
       },
-      { gateway: fakeGateway, now: laterNow, db: prisma }
+      { now: laterNow, db: prisma }
     );
     expect(newRes.code).not.toBe(oldRes.code);
 
@@ -260,36 +258,29 @@ describe("Reservations Integration Tests (Day 1)", () => {
           roomId: testRoomId,
           items: getValidItems(),
         },
-        { gateway: fakeGateway, now: fixedNow, db: prisma }
+        { now: fixedNow, db: prisma }
       )
     ).rejects.toThrow(RoomUnavailableError);
   });
 
-  it("6. FakeGateway fails: reservation marked EXPIRED, 502 thrown, slot immediately freed", async () => {
+  it("6. R-Q7 QRIS belum diatur → 503; R-Q3 nominal unik berbeda untuk total yang sama", async () => {
     const fixedNow = wibDateTime("2026-10-16", "12:00");
-    fakeGateway.setShouldFail(true);
-
+    await prisma.setting.update({ where: { id: 1 }, data: { qrisPayload: "" } });
     await expect(
-      createReservation(
-        {
-          ...baseInput,
-          roomId: testRoomId,
-          items: getValidItems(),
-        },
-        { gateway: fakeGateway, now: fixedNow, db: prisma }
-      )
-    ).rejects.toThrow(PaymentGatewayError);
+      createReservation({ ...baseInput, roomId: testRoomId, items: getValidItems() }, { now: fixedNow, db: prisma })
+    ).rejects.toMatchObject({ code: "PAYMENT_NOT_CONFIGURED", statusCode: 503 });
 
-    // Slot can immediately be reserved again
-    const nextBooking = await createReservation(
-      {
-        ...baseInput,
-        roomId: testRoomId,
-        items: getValidItems(),
-      },
-      { gateway: fakeGateway, now: fixedNow, db: prisma }
+    await setTestQris(prisma);
+    const first = await createReservation(
+      { ...baseInput, roomId: testRoomId, items: getValidItems() },
+      { now: fixedNow, db: prisma }
     );
-    expect(nextBooking.code).toBeDefined();
+    const second = await createReservation(
+      { ...baseInput, roomId: testRoomId, start: "14:00", end: "16:00", items: getValidItems() },
+      { now: fixedNow, db: prisma }
+    );
+    expect(first.totalAmount).toBe(second.totalAmount);
+    expect([first.uniqueDiscount, second.uniqueDiscount]).toEqual([1, 2]);
   });
 
   it("7. Booking on H-0: rejected with 422 TIME_RULE", async () => {
@@ -304,7 +295,7 @@ describe("Reservations Integration Tests (Day 1)", () => {
           roomId: testRoomId,
           items: getValidItems(),
         },
-        { gateway: fakeGateway, now: sameDayNow, db: prisma }
+        { now: sameDayNow, db: prisma }
       )
     ).rejects.toThrow(TimeRuleError);
   });
@@ -342,7 +333,7 @@ describe("Reservations Integration Tests (Day 1)", () => {
           roomId: testRoomId,
           items: getValidItems(),
         },
-        { gateway: fakeGateway, now: fixedNow, db: prisma }
+        { now: fixedNow, db: prisma }
       )
     ).rejects.toThrow(RoomUnavailableError);
   });
@@ -357,7 +348,7 @@ describe("Reservations Integration Tests (Day 1)", () => {
         servingTime: "CUSTOM",
         servingAt: "11:30",
       },
-      { gateway: fakeGateway, now: fixedNow, db: prisma }
+      { now: fixedNow, db: prisma }
     );
 
     const saved = await prisma.reservation.findUnique({ where: { code: result.code } });

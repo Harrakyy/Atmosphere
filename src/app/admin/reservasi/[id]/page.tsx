@@ -45,7 +45,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 
 interface PendingAction {
-  endpoint: "check-in" | "no-show" | "complete";
+  endpoint: "check-in" | "no-show" | "complete" | "mark-paid" | "reject-payment";
   title: string;
   successMsg: string;
 }
@@ -90,6 +90,9 @@ interface ReservationDetail {
   kitchenNote: string | null;
   totalAmount: number;
   baseTotal: number;
+  payAmount: number;
+  uniqueDiscount: number;
+  paymentClaimedAt: string | null;
   paidAt: string | null;
   checkedInAt: string | null;
   completedAt: string | null;
@@ -143,7 +146,7 @@ export default function AdminReservasiDetailPage({
         throw new Error(json.error?.message || "Gagal memuat detail reservasi.");
       }
       setDetail(json.data);
-      setCancelRefundAmount(json.data.totalAmount);
+      setCancelRefundAmount(json.data.payAmount);
       setReschedRoomId(json.data.roomId);
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Terjadi kesalahan koneksi.");
@@ -333,6 +336,42 @@ export default function AdminReservasiDetailPage({
 
         {/* Action Buttons Toolbar based on Status */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* K-34: admin cek DANA lalu Tandai Lunas / Tolak */}
+          {(detail.status === "PENDING_PAYMENT" || (detail.status === "EXPIRED" && detail.paymentClaimedAt)) && (
+            <>
+              <Button
+                type="button"
+                size="lg"
+                className="bg-emerald-600 hover:bg-emerald-700"
+                disabled={actionLoading}
+                onClick={() =>
+                  setPendingAction({
+                    endpoint: "mark-paid",
+                    title: `Sudah cek DANA dan ada uang masuk ${formatRupiah(detail.payAmount)}?`,
+                    successMsg: "Pembayaran dikonfirmasi.",
+                  })
+                }
+              >
+                <CheckCheck /> Tandai Lunas
+              </Button>
+              <Button
+                type="button"
+                size="lg"
+                variant="destructive"
+                disabled={actionLoading}
+                onClick={() =>
+                  setPendingAction({
+                    endpoint: "reject-payment",
+                    title: "Tolak pembayaran ini? Slot akan dilepas.",
+                    successMsg: "Pembayaran ditolak, slot dilepas.",
+                  })
+                }
+              >
+                <XCircle /> Tolak
+              </Button>
+            </>
+          )}
+
           {detail.status === "CONFIRMED" && (
             <>
               <Button
@@ -490,6 +529,18 @@ export default function AdminReservasiDetailPage({
                 {formatRupiah(detail.totalAmount)}
               </span>
             </div>
+            <div className="mt-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-xs">
+              <span className="font-bold text-emerald-900">
+                Nominal QRIS (cocokkan di DANA)
+                {detail.paymentClaimedAt && (
+                  <span className="block font-normal text-emerald-700">
+                    Customer klaim sudah bayar:{" "}
+                    {new Date(detail.paymentClaimedAt).toLocaleString("id-ID", { timeZone: "Asia/Jakarta", dateStyle: "medium", timeStyle: "short" })} WIB
+                  </span>
+                )}
+              </span>
+              <span className="font-mono font-extrabold text-lg text-emerald-900">{formatRupiah(detail.payAmount)}</span>
+            </div>
           </div>
         </div>
 
@@ -585,7 +636,7 @@ export default function AdminReservasiDetailPage({
                   className="h-auto py-2 whitespace-normal"
                   onClick={() => {
                     setCancelBy("CAFE");
-                    setCancelRefundAmount(detail.totalAmount);
+                    setCancelRefundAmount(detail.payAmount);
                   }}
                 >
                   Dari Cafe (Refund 100%)
@@ -604,13 +655,13 @@ export default function AdminReservasiDetailPage({
             {cancelBy === "CUSTOMER" && (
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="cancel-refund-amount" className="text-xs font-bold text-gray-600">
-                  Nominal Refund (Rp 0 s/d {formatRupiah(detail.totalAmount)})
+                  Nominal Refund (Rp 0 s/d {formatRupiah(detail.payAmount)})
                 </Label>
                 <Input
                   id="cancel-refund-amount"
                   type="number"
                   min={0}
-                  max={detail.totalAmount}
+                  max={detail.payAmount}
                   required
                   value={cancelRefundAmount}
                   onChange={(e) => setCancelRefundAmount(Number(e.target.value))}

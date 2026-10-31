@@ -1,8 +1,8 @@
+import { setTestQris } from "../helpers/qris";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/server/db";
 import { seed } from "../../prisma/seed";
 import { createReservation } from "@/server/reservations/create";
-import { FakeGateway } from "@/server/payments/fake";
 
 // Generator dipaksa selalu menghasilkan kode yang sama, untuk menguji jalur kehabisan percobaan
 vi.mock("@/server/codes", async (importOriginal) => ({
@@ -25,6 +25,7 @@ describe("Tabrakan kode booking 4 karakter", () => {
     await prisma.room.deleteMany();
     await prisma.setting.deleteMany();
     await seed(prisma);
+    await setTestQris(prisma);
 
     roomId = (await prisma.room.findFirst({ where: { slug: "ruangan-1" } }))!.id;
     foodId = (await prisma.product.findFirst({ where: { name: "Pasta Aglio Olio" } }))!.id;
@@ -46,7 +47,7 @@ describe("Tabrakan kode booking 4 karakter", () => {
         servingTime: "ON_ARRIVAL",
         customer: { name: "Budi Santoso", phone: "0812-3456-7890" },
       },
-      { gateway: new FakeGateway(), now: new Date("2026-10-10T10:00:00+07:00"), db: prisma }
+      { now: new Date("2026-10-10T10:00:00+07:00"), db: prisma }
     );
 
   it("kalau semua percobaan kode bentrok → AppError CODE_COLLISION yang jelas, bukan error database mentah", async () => {

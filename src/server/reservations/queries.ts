@@ -3,6 +3,7 @@ import { NotFoundError } from "../http";
 import { normalizePhone } from "../phone";
 import { saveTicketLink, contactCafeLink, cancelLink } from "../wa";
 import { wibDateTime, todayWib } from "../time";
+import { toDynamicQris } from "../qris";
 import { ReservationStatus, Prisma } from "@prisma/client";
 
 export async function getTicketByToken(
@@ -33,8 +34,11 @@ export async function getTicketByToken(
 
   const effectiveStatus = isExpired ? "EXPIRED" : reservation.status;
 
-  const snapToken =
-    effectiveStatus === "PENDING_PAYMENT" ? reservation.snapToken : null;
+  // QRIS dinamis hanya dibuat selama masih menunggu bayar (R-Q2)
+  const qris =
+    effectiveStatus === "PENDING_PAYMENT" && setting?.qrisPayload
+      ? toDynamicQris(setting.qrisPayload, reservation.payAmount)
+      : null;
 
   const saveLink = saveTicketLink({
     code: reservation.code,
@@ -81,8 +85,10 @@ export async function getTicketByToken(
     servingAt: reservation.servingAt,
     kitchenNote: reservation.kitchenNote,
     holdExpiresAt: reservation.holdExpiresAt,
-    snapToken,
-    snapRedirectUrl: effectiveStatus === "PENDING_PAYMENT" ? reservation.snapRedirectUrl : null,
+    uniqueDiscount: reservation.uniqueDiscount,
+    payAmount: reservation.payAmount,
+    paymentClaimedAt: reservation.paymentClaimedAt,
+    qris,
     wa: {
       saveLink,
       contactCafeLink: contactLink,
@@ -182,7 +188,7 @@ export async function getAdminReservationDetail(
       start: reservation.startAt,
       end: reservation.endAt,
       reason: reservation.cancelReason ?? undefined,
-      totalAmount: reservation.totalAmount,
+      paidAmount: reservation.payAmount,
       refundAmount: reservation.refundAmount,
     });
   }
@@ -236,11 +242,21 @@ export async function getNeedsActionReservations(
     orderBy: { cancelledAt: "desc" },
   });
 
+  // (c) R-Q6: customer sudah klaim bayar, menunggu admin mengecek DANA
+  const claimedPayments = await db.reservation.findMany({
+    where: {
+      status: { in: ["PENDING_PAYMENT", "EXPIRED"] },
+      paymentClaimedAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
+    },
+    include: { room: true },
+    orderBy: { paymentClaimedAt: "asc" },
+  });
+
   // Gabungkan dan deduplikasi
   const seenIds = new Set<string>();
   const combined = [];
 
-  for (const r of [...conflictingReservations, ...pendingRefunds]) {
+  for (const r of [...claimedPayments, ...conflictingReservations, ...pendingRefunds]) {
     if (!seenIds.has(r.id)) {
       seenIds.add(r.id);
       combined.push(r);

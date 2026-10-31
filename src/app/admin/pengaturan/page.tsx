@@ -7,6 +7,7 @@ import { AlertTriangle, Loader2, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QrisUpload } from "@/components/admin/QrisUpload";
 
 interface SettingsData {
   openTime: string;
@@ -19,11 +20,11 @@ interface SettingsData {
   leadCutoffTime: string;
   maxAdvanceDays: number;
   holdMinutes: number;
-  paymentExpiryMinutes: number;
+  claimHoldMinutes: number;
   markupBps: number;
   roundingUnit: number;
-  vaMinTotal: number;
   cafeWhatsapp: string;
+  qrisPayload: string;
 }
 
 export default function AdminPengaturanPage() {
@@ -211,7 +212,18 @@ export default function AdminPengaturanPage() {
           </div>
         </div>
 
-        {/* Hold & Expiry Midtrans */}
+        {/* QRIS (K-37) */}
+        <div>
+          <h2 className="text-sm font-bold text-[#1C2955] border-b border-gray-100 pb-2 mb-3">
+            QRIS Pembayaran
+          </h2>
+          <QrisUpload
+            value={settings.qrisPayload}
+            onChange={(qrisPayload) => setSettings({ ...settings, qrisPayload })}
+          />
+        </div>
+
+        {/* Waktu tahan slot */}
         <div>
           <h2 className="text-sm font-bold text-[#1C2955] border-b border-gray-100 pb-2 mb-3">
             Waktu Tahan Slot & Pembayaran
@@ -226,18 +238,18 @@ export default function AdminPengaturanPage() {
                 onChange={(e) => setSettings({ ...settings, holdMinutes: Number(e.target.value) })}
                 className="w-full p-2.5 rounded-xl border border-[#DFDDD6]"
               />
-              <span className="text-[10px] text-gray-400 mt-1 block">Harus lebih besar dari Payment Expiry</span>
+              <span className="text-[10px] text-gray-400 mt-1 block">Batas waktu customer membayar setelah membuat pesanan</span>
             </div>
             <div>
-              <label htmlFor="setting-payment-expiry" className="font-bold text-gray-600 block mb-1">Payment Expiry (Menit Batas Snap)</label>
+              <label htmlFor="setting-claim-hold" className="font-bold text-gray-600 block mb-1">Perpanjangan Setelah Klaim Bayar (Menit)</label>
               <input
-                id="setting-payment-expiry"
+                id="setting-claim-hold"
                 type="number"
-                value={settings.paymentExpiryMinutes}
-                onChange={(e) => setSettings({ ...settings, paymentExpiryMinutes: Number(e.target.value) })}
+                value={settings.claimHoldMinutes}
+                onChange={(e) => setSettings({ ...settings, claimHoldMinutes: Number(e.target.value) })}
                 className="w-full p-2.5 rounded-xl border border-[#DFDDD6]"
               />
-              <span className="text-[10px] text-gray-400 mt-1 block">Durasi Snap token aktif di Midtrans</span>
+              <span className="text-[10px] text-gray-400 mt-1 block">Waktu admin untuk mengecek DANA setelah customer menekan &quot;Saya sudah bayar&quot;</span>
             </div>
           </div>
         </div>
@@ -257,7 +269,7 @@ export default function AdminPengaturanPage() {
                 onChange={(e) => setSettings({ ...settings, markupBps: Number(e.target.value) })}
                 className="w-full p-2.5 rounded-xl border border-[#DFDDD6]"
               />
-              <span className="text-[10px] text-gray-400 mt-1 block">300 bps = 3% kenaikan harga online</span>
+              <span className="text-[10px] text-gray-400 mt-1 block">0 = harga online sama dengan harga kasir; 300 bps = 3%</span>
             </div>
             <div>
               <label htmlFor="setting-rounding-unit" className="font-bold text-gray-600 block mb-1">Satuan Pembulatan (Rp)</label>

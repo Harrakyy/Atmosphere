@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { AppError } from "./http";
 import { Setting } from "@prisma/client";
+import { parseQris } from "./qris";
 
 export async function getSettings(db = prisma) {
   let setting = await db.setting.findUnique({ where: { id: 1 } });
@@ -20,12 +21,11 @@ export async function updateSettings(data: SettingPatch, db = prisma) {
   if (merged.openTime >= merged.closeTime) {
     throw new AppError("VALIDATION_ERROR", "Jam buka harus lebih awal dari jam tutup.", 400);
   }
-  if (merged.paymentExpiryMinutes >= merged.holdMinutes) {
-    throw new AppError(
-      "VALIDATION_ERROR",
-      "Waktu kedaluwarsa pembayaran harus lebih kecil dari waktu tahan slot.",
-      400
-    );
+  // R-Q1: string kosong boleh (QRIS belum diatur), selain itu wajib QRIS statis yang valid
+  if (data.qrisPayload) {
+    const qris = parseQris(data.qrisPayload);
+    if (!qris.ok) throw new AppError("VALIDATION_ERROR", qris.error, 400);
+    data = { ...data, qrisPayload: data.qrisPayload.trim() };
   }
   if (merged.minDurationMinutes > merged.maxDurationMinutes) {
     throw new AppError("VALIDATION_ERROR", "Durasi minimal tidak boleh melebihi durasi maksimal.", 400);

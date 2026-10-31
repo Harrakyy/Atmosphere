@@ -36,7 +36,7 @@ export async function POST(
       start: reservation.startAt,
       end: reservation.endAt,
       reason: reservation.cancelReason ?? undefined,
-      totalAmount: reservation.totalAmount,
+      paidAmount: reservation.payAmount,
       refundAmount: reservation.refundAmount,
     });
 

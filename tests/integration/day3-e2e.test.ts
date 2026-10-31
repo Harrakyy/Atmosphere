@@ -1,3 +1,7 @@
+import { todayWib, wibDateTime } from "@/server/time";
+// Tanggal pemesanan selalu di masa depan supaya tes tidak kedaluwarsa (R-T4/R-T5)
+const BOOK_DATE = todayWib(new Date(wibDateTime(todayWib(new Date()), "12:00").getTime() + 3 * 86400000));
+import { setTestQris } from "../helpers/qris";
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/server/db";
 import { seed } from "../../prisma/seed";
@@ -7,9 +11,10 @@ import { GET as getMenuRoute } from "@/app/api/menu/route";
 import { POST as createReservationRoute } from "@/app/api/reservations/route";
 import { GET as getTicketRoute } from "@/app/api/tickets/[token]/route";
 import { POST as lookupTicketRoute } from "@/app/api/tickets/lookup/route";
-import { POST as notificationRoute } from "@/app/api/payments/midtrans/notification/route";
 import { GET as getAdminCheckInSummaryRoute } from "@/app/api/admin/check-in/[code]/route";
 import { POST as postAdminCheckInRoute } from "@/app/api/admin/reservations/[id]/check-in/route";
+import { POST as claimPaymentRoute } from "@/app/api/tickets/[token]/claim-payment/route";
+import { POST as postMarkPaidRoute } from "@/app/api/admin/reservations/[id]/mark-paid/route";
 import { POST as postAdminCompleteRoute } from "@/app/api/admin/reservations/[id]/complete/route";
 import { GET as getAdminKitchenRoute } from "@/app/api/admin/kitchen/route";
 import { NextRequest } from "next/server";
@@ -35,6 +40,7 @@ describe("Hari 3 End-to-End Customer and Admin Flow", () => {
     await prisma.user.deleteMany();
 
     await seed(prisma);
+    await setTestQris(prisma);
 
     const room = await prisma.room.findFirst({ where: { slug: "ruangan-1" } });
     roomId = room!.id;
@@ -58,7 +64,7 @@ describe("Hari 3 End-to-End Customer and Admin Flow", () => {
   });
 
   it("Executes the complete customer booking, payment webhook, e-ticket, check-in by code, and kitchen queue cycle", async () => {
-    const bookingDate = "2026-10-18";
+    const bookingDate = BOOK_DATE;
 
     // 1. Customer searches availability (Langkah 1 & 2)
     const availReq = new NextRequest(
@@ -107,11 +113,11 @@ describe("Hari 3 End-to-End Customer and Admin Flow", () => {
     const checkoutJson = await checkoutRes.json();
     expect(checkoutJson.success).toBe(true);
 
-    const { code, ticketToken, totalAmount, snapToken } = checkoutJson.data;
+    const { code, ticketToken, totalAmount, payAmount } = checkoutJson.data;
     expect(code).toMatch(/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}$/);
     expect(ticketToken).toBeDefined();
-    expect(totalAmount).toBe(87000); // (28000 * 2) + (15500 * 2) = 56000 + 31000 = 87000
-    expect(snapToken).toBeDefined();
+    expect(totalAmount).toBe(84000); // markup 0%: (27000 * 2) + (15000 * 2)
+    expect(payAmount).toBe(83999); // R-Q3: diskon kode unik Rp1
 
     // 4. Ticket is initially PENDING_PAYMENT (Langkah 5)
     const ticketPendingRes = await getTicketRoute(
@@ -122,23 +128,23 @@ describe("Hari 3 End-to-End Customer and Admin Flow", () => {
     const ticketPendingJson = await ticketPendingRes.json();
     expect(ticketPendingJson.data.status).toBe("PENDING_PAYMENT");
 
-    // 5. Payment gateway webhook settlement arrives
-    const notifReq = new NextRequest(
-      "http://localhost:3000/api/payments/midtrans/notification",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          order_id: code,
-          status_code: "200",
-          transaction_status: "settlement",
-          gross_amount: "87000",
-          payment_type: "qris",
-        }),
-      }
+    expect(ticketPendingJson.data.qris).toMatch(/^000201010212.*5405839995802ID/);
+
+    // 5. Customer klaim sudah bayar, admin cek DANA lalu Tandai Lunas (R-Q4, K-34)
+    const claimRes = await claimPaymentRoute(
+      new NextRequest(`http://localhost:3000/api/tickets/${ticketToken}/claim-payment`, { method: "POST" }),
+      { params: Promise.resolve({ token: ticketToken }) }
     );
-    const notifRes = await notificationRoute(notifReq);
-    expect(notifRes.status).toBe(200);
+    expect(claimRes.status).toBe(200);
+    const pendingId = (await prisma.reservation.findUniqueOrThrow({ where: { code } })).id;
+    const markPaidRes = await postMarkPaidRoute(
+      new NextRequest(`http://localhost:3000/api/admin/reservations/${pendingId}/mark-paid`, {
+        method: "POST",
+        headers: { cookie: adminCookie },
+      }),
+      { params: Promise.resolve({ id: pendingId }) }
+    );
+    expect(markPaidRes.status).toBe(200);
 
     // 6. Ticket is now CONFIRMED; no QR/checkInUrl anymore, staff check in by typing the code
     const ticketConfirmedRes = await getTicketRoute(

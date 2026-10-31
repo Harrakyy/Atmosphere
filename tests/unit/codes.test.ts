@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { generateCode, generateTicketToken, toOrderId, orderIdToCode } from "@/server/codes";
+import { generateCode, generateTicketToken } from "@/server/codes";
 
-describe("codes.ts R-I1, R-I2, R-I3", () => {
+describe("codes.ts R-I1, R-I2", () => {
   it("R-I1: generateCode = 4 karakter, tanpa 0/O/1/I/L, selalu ada huruf dan angka", () => {
     for (let i = 0; i < 10000; i++) {
       const code = generateCode();
@@ -17,15 +17,4 @@ describe("codes.ts R-I1, R-I2, R-I3", () => {
     expect(/^[A-Za-z0-9_-]{32}$/.test(token)).toBe(true);
   });
 
-  it("R-I3: toOrderId menambah sufiks 8 hex dan orderIdToCode membaliknya", () => {
-    const orderId = toOrderId("7K2F");
-    expect(orderId).toMatch(/^7K2F-[0-9a-f]{8}$/);
-    expect(toOrderId("7K2F")).not.toBe(orderId);
-    expect(orderIdToCode(orderId)).toBe("7K2F");
-  });
-
-  it("orderIdToCode membiarkan order_id format lama dan kode tanpa sufiks", () => {
-    expect(orderIdToCode("ATM-7K2F9Q")).toBe("ATM-7K2F9Q");
-    expect(orderIdToCode("7K2F")).toBe("7K2F");
-  });
 });

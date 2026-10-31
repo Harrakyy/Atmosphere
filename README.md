@@ -2,14 +2,14 @@
 
 > Sistem Reservasi Ruangan & Pre-Order Menu — Atmosphere Cafe (MVP)
 
-Aplikasi web pemesanan ruangan meeting dan pre-order menu makanan/minuman dengan pembayaran otomatis via Midtrans, e-tiket unik 4 karakter, serta panel admin dan antrean dapur terpadu.
+Aplikasi web pemesanan ruangan meeting dan pre-order menu makanan/minuman dengan pembayaran QRIS dinamis (nominal unik, dikonfirmasi admin), e-tiket unik 4 karakter, serta panel admin dan antrean dapur terpadu.
 
 ## Tech Stack
 - Next.js (App Router)
 - React & TypeScript
 - Prisma ORM & PostgreSQL
 - Tailwind CSS
-- Midtrans Snap Gateway
+- QRIS dinamis (EMVCo) dari QRIS statis merchant
 - Vitest
 
 ## Getting Started
@@ -20,7 +20,7 @@ Aplikasi web pemesanan ruangan meeting dan pre-order menu makanan/minuman dengan
    ```
 
 2. **Konfigurasi environment:**
-   Salin `.env.example` ke `.env` dan lengkapi konfigurasi database serta kredensial Midtrans.
+   Salin `.env.example` ke `.env` dan lengkapi konfigurasi database. QRIS cafe diatur lewat Admin → Pengaturan.
 
 3. **Jalankan migrasi dan seed database:**
    ```bash

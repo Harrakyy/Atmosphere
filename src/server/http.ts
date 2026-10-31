@@ -64,9 +64,10 @@ export class CodeCollisionError extends AppError {
   }
 }
 
-export class PaymentGatewayError extends AppError {
-  constructor(message = "Gagal menghubungi payment gateway.") {
-    super("PAYMENT_GATEWAY_ERROR", message, 502);
+// R-Q7
+export class PaymentNotConfiguredError extends AppError {
+  constructor() {
+    super("PAYMENT_NOT_CONFIGURED", "Pembayaran belum dapat dilakukan karena QRIS cafe belum diatur. Silakan hubungi cafe.", 503);
   }
 }
 

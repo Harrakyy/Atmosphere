@@ -23,6 +23,8 @@ interface ReservationListItem {
   customerPhone: string;
   status: string;
   totalAmount: number;
+  payAmount: number;
+  paymentClaimedAt: string | null;
   refundStatus: string;
   refundAmount: number;
   room: {
@@ -170,7 +172,7 @@ export default function AdminReservasiListPage() {
             </h2>
           </div>
           <p className="text-xs text-amber-800 mb-3">
-            Reservasi berikut beririsan dengan jadwal pemeliharaan (blokir) atau memiliki status pengembalian dana (refund) yang tertunda:
+            Reservasi berikut menunggu verifikasi pembayaran QRIS, beririsan dengan jadwal pemeliharaan (blokir), atau memiliki refund yang tertunda:
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {needsActionList.map((item) => (
@@ -183,7 +185,11 @@ export default function AdminReservasiListPage() {
                   <div className="flex items-center justify-between font-bold text-[#1C2955]">
                     <span>{item.code}</span>
                     <span className="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">
-                      {item.status === "CANCELLED" ? "Refund Tertunda" : "Konflik Blokir"}
+                      {item.status === "CANCELLED"
+                        ? "Refund Tertunda"
+                        : item.paymentClaimedAt
+                          ? `Cek DANA ${formatRupiah(item.payAmount)}`
+                          : "Konflik Blokir"}
                     </span>
                   </div>
                   <div className="text-gray-600 mt-1">

@@ -92,7 +92,7 @@ Terakhir diperbarui: 11 Oktober 2026
 - 80 item sudah dirapikan di [`data/menu-awal.csv`](data/menu-awal.csv): pilihan dipisahkan dari nama, typo diperbaiki, harga diubah menjadi angka bulat.
 - Kolom `catatan_perapian` mencatat setiap perubahan dari data aslinya.
 
-### K-07 / K-08 ✅ Payment gateway: Midtrans Snap (sandbox)
+### ~~K-07 / K-08 Payment gateway: Midtrans Snap (sandbox)~~ → digantikan K-32 (30 Okt 2026)
 - Integrasi dibungkus dalam interface `PaymentGateway` supaya provider bisa diganti (misalnya iPaymu atau Xendit) tanpa mengubah logika reservasi.
 - **Ditolak:** upload bukti transfer + verifikasi admin, karena konfirmasi jadi bergantung pada admin yang online. Itu masalah yang sama dengan kondisi sekarang (Tabel 1 proposal).
 
@@ -100,12 +100,12 @@ Terakhir diperbarui: 11 Oktober 2026
 - **Alasan revisi:** Pasal 52 ayat (1) PBI 23/6/PBI/2021 melarang merchant membebankan *surcharge* atas biaya dari penyedia jasa pembayaran (QRIS, VA, dan lainnya). Menaikkan harga produk itu keputusan harga, bukan surcharge (sama seperti harga GoFood yang berbeda dari harga di toko).
 - Tidak ada baris "biaya layanan" di checkout.
 
-### K-15 ✅ Markup 3%, dibulatkan ke atas ke kelipatan Rp500
+### ~~K-15 Markup 3%, dibulatkan ke atas ke kelipatan Rp500~~ → digantikan K-36 (markup 0%)
 - `hargaOnline = ceil(hargaKasir × 1,03 / 500) × 500`. Persen markup dan satuan pembulatan disimpan di Pengaturan.
 - **Alasan:** hasil simulasi dengan 80 menu asli. Markup efektif per item 3,3–10% (rata-rata 4,7%), dan sudah cukup menutup biaya QRIS dan e-wallet di semua skenario.
 - **Ditolak:** 10%. Rombongan 20 orang akan membayar sekitar Rp100rb lebih mahal, padahal biaya Midtrans hanya sekitar Rp6rb. Ini bisa mendorong customer kembali memesan lewat WA.
 
-### K-16 ✅ Metode pembayaran yang ditampilkan di Snap
+### ~~K-16 Metode pembayaran yang ditampilkan di Snap~~ → gugur bersama Midtrans (K-32)
 - QRIS + e-wallet: selalu tampil.
 - VA bank: hanya tampil kalau total ≥ **Rp150.000** (batasnya diatur di Pengaturan).
 - Kartu kredit, Indomaret/Alfamart, dan paylater: dimatikan.
@@ -177,7 +177,7 @@ Terakhir diperbarui: 11 Oktober 2026
 ### K-29 🟡 MVP tidak mengirim email
 - Kolom email opsional dan hanya diteruskan ke Midtrans (Midtrans bisa mengirim instruksi pembayaran ke email tersebut). Konfirmasi ke customer lewat halaman e-tiket dan WA (K-06).
 
-### K-30 🟡 Status "Lunas" hanya ditentukan oleh webhook
+### ~~K-30 Status "Lunas" hanya ditentukan oleh webhook~~ → digantikan K-34
 - Webhook dari Midtrans → verifikasi signature → **cek ulang ke API Status Midtrans** → baru status berubah. Prosesnya aman kalau webhook datang berulang (idempoten).
 - Halaman "terima kasih" dari Snap tidak pernah dipakai untuk mengubah status.
 
@@ -185,6 +185,35 @@ Terakhir diperbarui: 11 Oktober 2026
 - Uang disimpan sebagai **integer rupiah** (`Int`), tidak pernah memakai float.
 - Waktu disimpan sebagai `timestamptz` (UTC). Semua aturan bisnis dihitung dalam WIB.
 - Harga, nama produk, dan pilihan **disalin (snapshot)** ke item reservasi saat checkout.
+
+---
+
+## D2. Pembayaran QRIS (30 Okt 2026)
+
+### K-32 ✅ Midtrans diganti QRIS statis yang dibuat dinamis
+- Teks QRIS (EMVCo) milik merchant diubah: tag `01` → `12`, tag `54` (nominal) disisipkan, CRC dihitung ulang. Customer cukup scan, nominalnya sudah terisi.
+- **Alasan:** Midtrans produksi mewajibkan mitra mendaftar merchant dengan dokumen usaha. QRIS DANA mitra (kategori UMI) sudah ada, dan biayanya hampir nol.
+- **Ditolak:** tetap memakai Midtrans, atau menyimpan Midtrans sebagai pilihan kedua (dua alur pembayaran yang harus dirawat). Kode Midtrans masih tersimpan di riwayat git.
+- **Risiko:** format dinamis hasil modifikasi tidak resmi, sehingga harus diuji di setiap e-wallet utama.
+
+### K-33 ✅ Nominal unik berupa potongan, bukan tambahan
+- `bayar = total − k`, dengan k angka terkecil yang sedang tidak dipakai (1–999). Dengan volume pesanan mitra, potongannya biasanya hanya Rp1–5.
+- **Alasan:** pembayaran bisa dicocokkan dari nominalnya saja. Kalau berupa tambahan, itu sama dengan surcharge (K-09).
+
+### K-34 ✅ Fase 1: konfirmasi manual oleh admin
+- Customer menekan "Saya sudah bayar" → waktu tahan slot diperpanjang → admin mengecek DANA → **Tandai Lunas** / **Tolak**.
+- Refund dihitung dari nominal yang benar-benar dibayar (`payAmount`).
+
+### K-35 ✅ Fase 2: aplikasi Android pembaca notifikasi DANA
+- `NotificationListenerService` (Kotlin), hanya membaca notifikasi dari package DANA. Data dikirim ke server dengan token perangkat + HMAC + timestamp.
+- APK dibagikan lewat **GitHub Releases** (bukan Play Store). Keystore penandatangan wajib disimpan aman.
+
+### K-36 ✅ Markup harga online 0%
+- Biaya QRIS UMI ke DANA sangat kecil. Pengaturan markup tetap ada kalau nanti dibutuhkan.
+
+### K-37 ✅ QRIS diganti lewat Pengaturan admin
+- Admin upload gambar QRIS → QR dibaca di browser → server memvalidasi (CRC, statis, ada nama merchant) → disimpan sebagai teks.
+- ❓ QRIS yang dipakai saat pengembangan milik merchant lain. Sebelum dipakai sungguhan, wajib diganti dengan QRIS mitra.
 
 ---
 

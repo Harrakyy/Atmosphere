@@ -1,27 +1,23 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Script from "next/script";
 import { Header } from "@/components/Header";
 import { Stepper } from "@/components/Stepper";
 import { useBookingDraft } from "@/lib/booking-draft";
 import { formatRupiah, formatDateIndo } from "@/lib/format";
 import { createReservationSchema } from "@/contracts";
-import { toast } from "sonner";
 import {
   AlertTriangle,
   ArrowLeft,
   CalendarDays,
   Clock,
-  CreditCard,
   DoorOpen,
   Loader2,
   Lock,
   NotebookPen,
   ShieldCheck,
-  Timer,
   UserRound,
   UtensilsCrossed,
 } from "lucide-react";
@@ -30,22 +26,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-declare global {
-  interface Window {
-    snap?: {
-      pay: (
-        token: string,
-        options?: {
-          onSuccess?: (result: unknown) => void;
-          onPending?: (result: unknown) => void;
-          onError?: (result: unknown) => void;
-          onClose?: () => void;
-        }
-      ) => void;
-    };
-  }
-}
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -59,42 +39,16 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSlotTaken, setIsSlotTaken] = useState(false);
-
-  // Payment session state
-  const [snapToken, setSnapToken] = useState<string | null>(null);
-  const [ticketToken, setTicketToken] = useState<string | null>(null);
-  const [holdExpiresAt, setHoldExpiresAt] = useState<Date | null>(null);
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(0);
-
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  // Setelah pesanan dibuat draft dikosongkan; jangan sampai efek di bawah melempar ke /reservasi/menu
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || submitted) return;
 
     if (!draft.roomId || !draft.date || !draft.items || draft.items.length === 0) {
       router.replace("/reservasi/menu");
     }
-  }, [isLoaded, draft.roomId, draft.date, draft.items, router]);
-
-  // Countdown timer effect
-  useEffect(() => {
-    if (!holdExpiresAt) return;
-
-    const updateTimer = () => {
-      const diff = Math.max(0, Math.floor((holdExpiresAt.getTime() - Date.now()) / 1000));
-      setSecondsRemaining(diff);
-      if (diff <= 0 && timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-
-    updateTimer();
-    timerRef.current = setInterval(updateTimer, 1000);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [holdExpiresAt]);
+  }, [isLoaded, submitted, draft.roomId, draft.date, draft.items, router]);
 
   const totalAmount = draft.items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
 
@@ -151,14 +105,10 @@ export default function CheckoutPage() {
         throw new Error(json.error?.message || "Gagal membuat reservasi");
       }
 
-      const data = json.data;
-      setSnapToken(data.snapToken);
-      setTicketToken(data.ticketToken);
-      const expiresAt = new Date(data.holdExpiresAt);
-      setHoldExpiresAt(expiresAt);
-
-      // Trigger Snap popup jika tersedia
-      triggerSnapPayment(data.snapToken, data.ticketToken, data.snapRedirectUrl);
+      // QRIS dinamis ditampilkan di e-tiket supaya customer bisa kembali ke halaman itu kapan saja
+      setSubmitted(true);
+      clearDraft();
+      router.replace(`/tiket/${json.data.ticketToken}`);
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Terjadi kesalahan saat memproses pesanan.");
     } finally {
@@ -166,46 +116,6 @@ export default function CheckoutPage() {
     }
   };
 
-  const triggerSnapPayment = (token: string, targetTicketToken: string, fallbackRedirectUrl?: string) => {
-    if (window.snap && window.snap.pay) {
-      window.snap.pay(token, {
-        onSuccess: () => {
-          clearDraft();
-          router.push(`/tiket/${targetTicketToken}`);
-        },
-        onPending: () => {
-          clearDraft();
-          router.push(`/tiket/${targetTicketToken}`);
-        },
-        onError: (result) => {
-          console.error("Snap error:", result);
-          toast.error("Pembayaran gagal atau dibatalkan. Anda dapat mencoba bayar lagi.");
-        },
-        onClose: () => {
-          // Tetap di halaman, pengguna bisa menekan tombol Bayar lagi
-          toast.info("Pembayaran belum selesai. Tekan \"Buka Pembayaran\" untuk melanjutkan.");
-        },
-      });
-    } else if (fallbackRedirectUrl) {
-      window.location.href = fallbackRedirectUrl;
-    } else {
-      router.push(`/tiket/${targetTicketToken}`);
-    }
-  };
-
-  const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "SB-Mid-client-placeholder";
-  const snapScriptUrl =
-    process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === "true"
-      ? "https://app.midtrans.com/snap/snap.js"
-      : "https://app.sandbox.midtrans.com/snap/snap.js";
-
-  const formatTimer = (sec: number) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  };
-
-  const isHolding = Boolean(snapToken && secondsRemaining > 0);
   const servingLabel = {
     ON_ARRIVAL: "Saat Tiba di Lokasi",
     AFTER_30_MIN: "30 Menit Setelah Tiba",
@@ -214,9 +124,6 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Midtrans Snap Script */}
-      <Script src={snapScriptUrl} data-client-key={clientKey} strategy="lazyOnload" />
-
       <Header />
       <Stepper currentStep={4} />
 
@@ -267,7 +174,6 @@ export default function CheckoutPage() {
                     placeholder="Contoh: Budi Santoso"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    disabled={isHolding}
                     className="h-11 rounded-xl"
                   />
                 </div>
@@ -285,7 +191,6 @@ export default function CheckoutPage() {
                     placeholder="Contoh: 081234567890"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    disabled={isHolding}
                     className="h-11 rounded-xl"
                   />
                   <span className="text-[11px] text-muted-foreground">
@@ -304,7 +209,6 @@ export default function CheckoutPage() {
                     placeholder="Contoh: budi@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    disabled={isHolding}
                     className="h-11 rounded-xl"
                   />
                 </div>
@@ -374,19 +278,6 @@ export default function CheckoutPage() {
                 )}
               </dl>
 
-              {/* Hold Timer Alert (if snap session created) */}
-              {snapToken && holdExpiresAt && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-center" aria-live="polite">
-                  <span className="flex items-center justify-center gap-1 text-[11px] font-bold text-amber-800 uppercase tracking-wider">
-                    <Timer className="size-3.5" /> Batas Waktu Pembayaran
-                  </span>
-                  <span className="block text-xl font-mono font-extrabold text-amber-900 mt-0.5">
-                    {secondsRemaining > 0 ? formatTimer(secondsRemaining) : "Kedaluwarsa"}
-                  </span>
-                  <span className="block text-[10px] text-amber-700 mt-1">Slot ditahan hingga waktu habis</span>
-                </div>
-              )}
-
               {/* Total & Action Button */}
               <div className="pt-4 border-t">
                 <div className="flex items-center justify-between mb-4">
@@ -394,32 +285,19 @@ export default function CheckoutPage() {
                   <span className="text-xl font-extrabold">{formatRupiah(totalAmount)}</span>
                 </div>
 
-                {!snapToken ? (
-                  <Button type="submit" form="checkout-form" variant="brand" size="xl" className="w-full" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Loader2 className="animate-spin" /> Memproses...
-                      </>
-                    ) : (
-                      <>
-                        <Lock /> Bayar Sekarang
-                      </>
-                    )}
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    size="xl"
-                    className="w-full"
-                    disabled={secondsRemaining <= 0}
-                    onClick={() => ticketToken && triggerSnapPayment(snapToken, ticketToken)}
-                  >
-                    <CreditCard />
-                    {secondsRemaining > 0 ? "Buka Pembayaran" : "Waktu Habis"}
-                  </Button>
-                )}
+                <Button type="submit" form="checkout-form" variant="brand" size="xl" className="w-full" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="animate-spin" /> Memproses...
+                    </>
+                  ) : (
+                    <>
+                      <Lock /> Buat Pesanan &amp; Bayar
+                    </>
+                  )}
+                </Button>
                 <p className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground mt-2">
-                  <ShieldCheck className="size-3" /> Pembayaran aman via Midtrans (QRIS, e-wallet, VA)
+                  <ShieldCheck className="size-3" /> Bayar dengan QRIS (semua e-wallet &amp; m-banking)
                 </p>
               </div>
             </Card>
