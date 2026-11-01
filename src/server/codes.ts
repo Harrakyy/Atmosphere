@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 
-export const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const CODE_LENGTH = 4;
 
 // R-I1: 4 karakter, minimal 1 huruf dan 1 angka. Diulang (bukan dipaksakan) supaya distribusinya tetap merata.

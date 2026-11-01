@@ -205,11 +205,8 @@ Terakhir diperbarui: 11 Oktober 2026
 - Refund dihitung dari nominal yang benar-benar dibayar (`payAmount`).
 
 ### K-35 ✅ Fase 2: aplikasi Android pembaca notifikasi DANA
-- Aplikasi **SetorPantau** (repo `Harrakyy/setorpantau`, Capacitor) hanya membaca notifikasi dari package DANA, lalu mengirim `{notifId, amount, time, text}` ke `POST /api/payments/qris/notification`.
-- Keamanan: **token perangkat (Bearer)**, bukan HMAC + timestamp seperti rencana awal, supaya aplikasi yang sudah jadi tidak perlu diubah. Token didapat dari kode pairing 8 karakter (Admin → Pengaturan, berlaku 10 menit, sekali pakai); server hanya menyimpan hash SHA-256-nya. Admin bisa memutus perangkat kapan saja (balasan 401 → HP minta pairing ulang).
-- Pencocokan: `amount = payAmount` pada reservasi `PENDING_PAYMENT` atau `EXPIRED` ≤ 24 jam (R-Q3), dan uang masuk setelah pesanan dibuat (toleransi jam HP 5 menit) → `markPaid()`. Hasil: `MATCHED`, `ALREADY_PAID`, `LATE_SLOT_TAKEN` (batal + refund penuh), `NO_MATCH`. Notifikasi yang sama tidak diproses dua kali (`deviceId + notifId` unik).
+- `NotificationListenerService` (Kotlin), hanya membaca notifikasi dari package DANA. Data dikirim ke server dengan token perangkat + HMAC + timestamp.
 - APK dibagikan lewat **GitHub Releases** (bukan Play Store). Keystore penandatangan wajib disimpan aman.
-- ❓ Belum diuji dengan notifikasi DANA Bisnis sungguhan: pastikan nominal di notifikasi = nominal yang dibayar customer (bukan setelah potongan MDR).
 
 ### K-36 ✅ Markup harga online 0%
 - Biaya QRIS UMI ke DANA sangat kecil. Pengaturan markup tetap ada kalau nanti dibutuhkan.
