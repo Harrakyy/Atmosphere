@@ -5,7 +5,7 @@ import { handleIncomingPayment } from "@/server/payments/incoming";
 import { hitRateLimit } from "@/server/rate-limit";
 import { AppError, ok, handleError } from "@/server/http";
 
-// Dipanggil aplikasi SetorPantau di HP kasir setiap ada notifikasi DANA "Pembayaran Masuk" (K-35)
+// Dipanggil app Setor di HP kasir (Protokol Setor §2) setiap ada notifikasi DANA "Pembayaran Masuk" (K-35)
 export async function POST(request: NextRequest) {
   try {
     const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";

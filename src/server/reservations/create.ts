@@ -3,6 +3,7 @@ import { validateSchedule } from "../time-rules";
 import { validateCart, CartItemInput, ProductWithCategory } from "../cart";
 import { normalizePhone } from "../phone";
 import { generateCode, generateTicketToken } from "../codes";
+import { pickUniqueCode } from "../payment-band";
 import {
   AppError,
   SlotTakenError,
@@ -36,7 +37,7 @@ export interface CreateReservationResult {
   code: string;
   ticketToken: string;
   totalAmount: number;
-  uniqueDiscount: number;
+  uniqueCode: number;
   payAmount: number;
   holdExpiresAt: Date;
 }
@@ -203,7 +204,7 @@ export async function createReservation(
         }
         if (!code) throw new CodeCollisionError();
 
-        const uniqueDiscount = await pickUniqueDiscount(tx, cart.totalAmount, now);
+        const uniqueCode = await pickReservationCode(tx, cart.totalAmount, now);
 
         const created = await tx.reservation.create({
           data: {
@@ -224,8 +225,8 @@ export async function createReservation(
             status: "PENDING_PAYMENT",
             totalAmount: cart.totalAmount,
             baseTotal: cart.baseTotal,
-            uniqueDiscount,
-            payAmount: cart.totalAmount - uniqueDiscount,
+            uniqueCode,
+            payAmount: cart.totalAmount + uniqueCode,
             holdExpiresAt,
             items: {
               create: cart.items.map((i) => ({
@@ -262,7 +263,7 @@ export async function createReservation(
         code: reservation.code,
         ticketToken: reservation.ticketToken,
         totalAmount: reservation.totalAmount,
-        uniqueDiscount: reservation.uniqueDiscount,
+        uniqueCode: reservation.uniqueCode,
         payAmount: reservation.payAmount,
         holdExpiresAt,
       };
@@ -282,27 +283,29 @@ export async function createReservation(
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-// R-Q3: k terkecil yang belum dipakai. Reservasi kedaluwarsa ≤24 jam ikut dihindari supaya bayar terlambat tidak tertukar.
-async function pickUniqueDiscount(tx: Tx, totalAmount: number, now: Date): Promise<number> {
-  const maxK = Math.min(999, totalAmount - 1);
+// R-Q3 + K-41: nominal bayar = total + kode unik, di jalur Atmosphere (Protokol Setor) dan belum dipakai.
+// Nominal yang menunggu bayar, kedaluwarsa ≤24 jam, atau baru lunas ≤24 jam ikut dihindari supaya
+// bayar terlambat atau bayar dobel tidak tertukar dengan pesanan baru.
+async function pickReservationCode(tx: Tx, totalAmount: number, now: Date): Promise<number> {
   const recent = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const used = await tx.reservation.findMany({
     where: {
-      payAmount: { gte: totalAmount - maxK, lt: totalAmount },
+      payAmount: { gt: totalAmount, lt: totalAmount + 1000 },
       OR: [
         { status: "PENDING_PAYMENT" },
         { status: "EXPIRED", holdExpiresAt: { gte: recent } },
+        { status: { in: ["CONFIRMED", "CHECKED_IN", "COMPLETED"] }, paidAt: { gte: recent } },
       ],
     },
     select: { payAmount: true },
   });
-  const taken = new Set(used.map((r) => totalAmount - r.payAmount));
-  for (let k = 1; k <= maxK; k++) {
-    if (!taken.has(k)) return k;
+  try {
+    return pickUniqueCode(totalAmount, new Set(used.map((r) => r.payAmount)));
+  } catch {
+    throw new AppError(
+      "PAYMENT_BUSY",
+      "Terlalu banyak pembayaran yang sedang menunggu. Silakan coba lagi beberapa menit lagi.",
+      503
+    );
   }
-  throw new AppError(
-    "PAYMENT_BUSY",
-    "Terlalu banyak pembayaran yang sedang menunggu. Silakan coba lagi beberapa menit lagi.",
-    503
-  );
 }

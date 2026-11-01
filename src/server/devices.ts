@@ -1,8 +1,12 @@
 import crypto from "node:crypto";
 import { prisma } from "./db";
 import { AppError, NotFoundError, UnauthorizedError } from "./http";
+import { ATMOSPHERE_BAND } from "./payment-band";
 
-// K-35: HP kasir (SetorPantau) dipasangkan dengan kode sekali pakai, lalu memakai token pribadi.
+// Protokol Setor §1: identitas usaha dan jalur nominal dikirim saat pairing
+const BUSINESS = { name: "Atmosphere Cafe", type: "cafe" } as const;
+
+// K-35: HP kasir (app Setor) dipasangkan dengan kode sekali pakai, lalu memakai token pribadi.
 // Token dan kode hanya disimpan sebagai sha256, jadi kebocoran database tidak membocorkan aksesnya.
 const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const PAIRING_TTL_MS = 10 * 60 * 1000;
@@ -19,7 +23,9 @@ export async function createPairingCode(adminId: string, now: Date = new Date(),
 
 export async function pairDevice(input: { code: string; name: string }, now: Date = new Date(), db = prisma) {
   const name = input.name.trim().slice(0, 40) || "HP Kasir";
-  const pairing = await db.pairingCode.findUnique({ where: { codeHash: sha256(input.code.trim().toUpperCase()) } });
+  // Kode boleh diketik dengan spasi/tanda hubung (mis. "K7Q2-M9XA")
+  const code = input.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const pairing = await db.pairingCode.findUnique({ where: { codeHash: sha256(code) } });
   if (!pairing || pairing.usedAt || pairing.expiresAt <= now) {
     throw new AppError("PAIRING_INVALID", "Kode pairing salah atau sudah kedaluwarsa. Buat kode baru dari halaman admin.", 400);
   }
@@ -32,7 +38,7 @@ export async function pairDevice(input: { code: string; name: string }, now: Dat
       data: { name, tokenHash: sha256(token), createdById: pairing.createdById },
       select: { id: true, name: true },
     });
-    return { token, device };
+    return { token, device, business: BUSINESS, band: ATMOSPHERE_BAND };
   });
 }
 

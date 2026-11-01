@@ -118,7 +118,7 @@ describe("Hari 3 End-to-End Customer and Admin Flow", () => {
     expect(code).toMatch(/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}$/);
     expect(ticketToken).toBeDefined();
     expect(totalAmount).toBe(84000); // markup 0%: (27000 * 2) + (15000 * 2)
-    expect(payAmount).toBe(83999); // R-Q3: diskon kode unik Rp1
+    expect(payAmount).toBe(84100); // K-41: kode unik +Rp100, 3 digit akhir di jalur Atmosphere 100–499
 
     // 4. Ticket is initially PENDING_PAYMENT (Langkah 5)
     const ticketPendingRes = await getTicketRoute(
@@ -129,7 +129,7 @@ describe("Hari 3 End-to-End Customer and Admin Flow", () => {
     const ticketPendingJson = await ticketPendingRes.json();
     expect(ticketPendingJson.data.status).toBe("PENDING_PAYMENT");
 
-    expect(ticketPendingJson.data.qris).toMatch(/^000201010212.*5405839995802ID/);
+    expect(ticketPendingJson.data.qris).toMatch(/^000201010212.*5405841005802ID/);
 
     // 5. Customer klaim sudah bayar, admin cek DANA lalu Tandai Lunas (R-Q4, K-34)
     const claimRes = await claimPaymentRoute(

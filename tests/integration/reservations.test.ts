@@ -73,8 +73,8 @@ describe("Reservations Integration Tests (Day 1)", () => {
     expect(result.code).toMatch(/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}$/);
     expect(result.ticketToken).toHaveLength(32);
     // R-Q3: nominal unik pertama = total − Rp1
-    expect(result.uniqueDiscount).toBe(1);
-    expect(result.payAmount).toBe(result.totalAmount - 1);
+    expect(result.uniqueCode).toBe(100); // K-41: Rp84.000 → Rp84.100
+    expect(result.payAmount).toBe(result.totalAmount + 100);
 
     // Verify database record
     const saved = await prisma.reservation.findUnique({
@@ -280,7 +280,7 @@ describe("Reservations Integration Tests (Day 1)", () => {
       { now: fixedNow, db: prisma }
     );
     expect(first.totalAmount).toBe(second.totalAmount);
-    expect([first.uniqueDiscount, second.uniqueDiscount]).toEqual([1, 2]);
+    expect([first.uniqueCode, second.uniqueCode]).toEqual([100, 101]);
   });
 
   it("7. Booking on H-0: rejected with 422 TIME_RULE", async () => {

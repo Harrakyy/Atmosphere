@@ -260,3 +260,20 @@ Terakhir diperbarui: 11 Oktober 2026
 - Dikirim saat aplikasi berjalan (terbuka / latar belakang); offline → antri, dicoba ulang otomatis.
 - Hanya transaksi sejak 1 jam sebelum pairing yang dikirim, supaya riwayat lama tidak membanjiri admin.
 - ❓ Batasan: kalau aplikasi ditutup paksa, notif tetap tersimpan tapi baru terkirim saat aplikasi dibuka lagi. Mengirim langsung dari service native butuh kode Kotlin sendiri (tahap berikutnya kalau dibutuhkan).
+
+## D4. Protokol Setor (1 Nov 2026)
+
+### K-41 ✅ Kode unik DITAMBAHKAN, nominal bayar di jalur 100–499 → merevisi K-33
+- App pembaca notifikasi sekarang **Setor** (umum untuk beberapa usaha, satu DANA). Tiap usaha punya jalur 3 digit terakhir nominal: tab.booth 001–099, **Atmosphere 100–499**, Kosinyuk 500–999 ([Protokol Setor](https://github.com/Harrakyy/Setor/blob/main/docs/PROTOKOL-SETOR.md)).
+- `bayar = total + k`, k terkecil (1–999) yang membuat 3 digit akhir 100–499 dan belum dipakai. Contoh Rp84.000 → Rp84.100; Rp30.500 → Rp31.100.
+- **Alasan revisi K-33:** dengan potongan, total bulat ribuan butuh potongan Rp501–900 per pesanan. Diputuskan pemilik usaha: kode unik ditambah, seperti "kode unik transfer" yang umum dipakai toko.
+- ⚠️ **Risiko yang diterima:** kode unik tambahan bisa dianggap biaya tambahan ke customer (lihat K-09, larangan surcharge PBI 23/6/PBI/2021). Argumennya: kode unik bukan pembebanan MDR/biaya PJP, nilainya kecil, dan ditampilkan transparan sebagai "Kode unik (pencocok pembayaran)".
+- Nominal yang baru lunas ≤24 jam juga tidak dipakai ulang, supaya pembayaran dobel tidak tertukar ke pesanan baru.
+
+### K-42 ✅ Pembayaran kedua untuk booking yang sudah lunas ditampilkan ke admin
+- Kemungkinan customer bayar dobel → hasil `unmatched` ke Setor (label "KODE · bayar dobel?") dan muncul di kartu **"Pembayaran perlu dicek"** supaya uangnya dikembalikan.
+
+### K-43 ✅ Atmosphere mengikuti Protokol Setor
+- Pairing mengembalikan `business` (`Atmosphere Cafe`, `cafe`) + `band` 100–499. Hasil uang masuk `matched` / `unmatched` / `duplicate` + `label` "KODE · nama pemesan".
+- Implementasi paralel `05f7fe5` (tabel `Device`/`QrisNotification`) di-revert; dasar yang dipakai adalah implementasi yang sudah dimigrasi ke produksi (tabel `PaymentDevice`/`PairingCode`/`IncomingPayment`) dan teruji E2E dengan kode asli app Setor.
+- Repo SetorPantau digantikan Setor (ID aplikasi sama, `com.harrakyy.setorpantau`, sehingga keduanya tidak bisa terpasang bersamaan).

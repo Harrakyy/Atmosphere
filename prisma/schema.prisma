@@ -139,8 +139,8 @@ model Reservation {
   totalAmount      Int // harga online
   baseTotal        Int // harga kasir (untuk info)
   holdExpiresAt    DateTime          @db.Timestamptz(3)
-  payAmount        Int // totalAmount − uniqueDiscount, nominal yang benar-benar dibayar (R-Q3)
-  uniqueDiscount   Int               @default(0)
+  payAmount        Int // totalAmount + uniqueCode, nominal yang benar-benar dibayar (R-Q3, jalur K-41)
+  uniqueCode       Int               @default(0)
   paymentClaimedAt DateTime?         @db.Timestamptz(3)
   paymentType      String?
   paidAt           DateTime?         @db.Timestamptz(3)

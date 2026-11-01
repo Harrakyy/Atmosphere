@@ -12,6 +12,7 @@ interface Unmatched {
   notifiedAt: string;
   text: string;
   device: { name: string };
+  possibleDoublePaymentOf: string | null; // K-42
 }
 
 // Uang masuk dari DANA yang nominalnya tidak cocok dengan reservasi mana pun (K-35)
@@ -46,11 +47,11 @@ export function UnmatchedPayments() {
   return (
     <div className="bg-sky-50 border border-sky-200 rounded-2xl p-5">
       <h2 className="flex items-center gap-2 text-sm font-bold text-sky-900 mb-1">
-        <CircleHelp className="size-4" /> Pembayaran tanpa pesanan ({items.length})
+        <CircleHelp className="size-4" /> Pembayaran perlu dicek ({items.length})
       </h2>
       <p className="text-xs text-sky-800 mb-3">
-        Uang masuk ke DANA tapi nominalnya tidak cocok dengan reservasi yang menunggu bayar. Cek apakah customer salah
-        mengetik nominal, lalu tandai lunas manual dari detail reservasinya.
+        Uang masuk ke DANA yang tidak bisa dicocokkan otomatis: nominal tanpa pesanan (customer salah ketik nominal → tandai
+        lunas manual dari detail reservasinya), atau pembayaran kedua untuk booking yang sudah lunas (kembalikan uangnya).
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {items.map((p) => (
@@ -60,6 +61,11 @@ export function UnmatchedPayments() {
               <p className="text-gray-500">
                 {new Date(p.notifiedAt).toLocaleString("id-ID", { timeZone: "Asia/Jakarta", dateStyle: "medium", timeStyle: "short" })} WIB
                 · {p.device.name}
+              </p>
+              <p className={p.possibleDoublePaymentOf ? "text-amber-700 font-semibold" : "text-gray-500"}>
+                {p.possibleDoublePaymentOf
+                  ? `Kemungkinan bayar dobel untuk ${p.possibleDoublePaymentOf} (sudah lunas) — kembalikan uangnya`
+                  : "Tidak ada pesanan dengan nominal ini"}
               </p>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={() => dismiss(p.id)}>

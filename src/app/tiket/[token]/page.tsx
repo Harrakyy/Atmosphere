@@ -43,7 +43,7 @@ interface TicketData {
   servingAt: string | null;
   kitchenNote: string | null;
   holdExpiresAt: string;
-  uniqueDiscount: number;
+  uniqueCode: number;
   payAmount: number;
   paymentClaimedAt: string | null;
   qris: string | null;
@@ -217,7 +217,7 @@ export default function TiketPage({
                   code={ticket.code}
                   qris={ticket.qris}
                   totalAmount={ticket.totalAmount}
-                  uniqueDiscount={ticket.uniqueDiscount}
+                  uniqueCode={ticket.uniqueCode}
                   payAmount={ticket.payAmount}
                   holdExpiresAt={ticket.holdExpiresAt}
                   paymentClaimedAt={ticket.paymentClaimedAt}
@@ -297,7 +297,7 @@ export default function TiketPage({
 
                 <div className="mt-3 flex items-center justify-between p-3 bg-primary/5 rounded-xl">
                   <span className="text-xs font-bold">
-                    {ticket.uniqueDiscount > 0 ? `Dibayar (diskon kode unik −${formatRupiah(ticket.uniqueDiscount)}):` : "Total Pre-Order:"}
+                    {ticket.uniqueCode > 0 ? `Dibayar (termasuk kode unik +${formatRupiah(ticket.uniqueCode)}):` : "Total Pre-Order:"}
                   </span>
                   <span className="text-base font-extrabold">{formatRupiah(ticket.payAmount)}</span>
                 </div>

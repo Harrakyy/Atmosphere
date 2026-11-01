@@ -48,7 +48,7 @@ describe("Pembayaran QRIS manual (R-Q2..R-Q6)", () => {
   it("tiket menampilkan QRIS dinamis dengan nominal payAmount selama menunggu bayar", async () => {
     const r = await book();
     const ticket = await getTicketByToken(r.ticketToken, NOW, "http://x", prisma);
-    expect(ticket.payAmount).toBe(r.totalAmount - 1);
+    expect(ticket.payAmount).toBe(r.totalAmount + 100); // K-41
     expect(ticket.qris).toContain(`54${String(ticket.payAmount).length.toString().padStart(2, "0")}${ticket.payAmount}`);
     expect(ticket.qris).toMatch(/^000201010212/);
   });

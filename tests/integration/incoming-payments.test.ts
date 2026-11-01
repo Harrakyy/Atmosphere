@@ -64,7 +64,10 @@ describe("Fase 2: HP kasir melaporkan pembayaran (K-35)", () => {
     expect(code).toMatch(/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}$/);
     expect(expiresAt.getTime()).toBe(NOW.getTime() + 10 * MIN);
 
-    const { token, device } = await pairDevice({ code: code.toLowerCase(), name: "HP Kasir" }, NOW, prisma);
+    const paired = await pairDevice({ code: code.slice(0, 4).toLowerCase() + "-" + code.slice(4), name: "HP Kasir" }, NOW, prisma);
+    const { token, device } = paired;
+    expect(paired.business).toEqual({ name: "Atmosphere Cafe", type: "cafe" });
+    expect(paired.band).toEqual({ min: 100, max: 499 });
     expect(token.length).toBeGreaterThanOrEqual(40);
     const saved = await prisma.paymentDevice.findUniqueOrThrow({ where: { id: device.id } });
     expect(saved.tokenHash).not.toContain(token);
@@ -82,7 +85,7 @@ describe("Fase 2: HP kasir melaporkan pembayaran (K-35)", () => {
     const { token, device } = await pairedDevice();
     const r = await book();
     const res = await report(token, { notifId: "n1", amount: r.payAmount, time: at(5).getTime() }, at(6));
-    expect(res).toMatchObject({ result: "MATCHED", reservationCode: r.code });
+    expect(res).toMatchObject({ result: "matched", label: `${r.code} · Budi`, reservationCode: r.code });
     const row = await prisma.reservation.findUniqueOrThrow({ where: { code: r.code } });
     expect(row.status).toBe("CONFIRMED");
     expect(row.paymentType).toBe("QRIS");
@@ -95,7 +98,7 @@ describe("Fase 2: HP kasir melaporkan pembayaran (K-35)", () => {
     const body = { notifId: "n1", amount: r.payAmount, time: at(5).getTime() };
     const first = await report(token, body, at(6));
     const again = await report(token, body, at(7));
-    expect(again).toEqual(first);
+    expect(again).toEqual({ ...first, result: "duplicate" }); // Protokol Setor §2
     expect(await prisma.incomingPayment.count()).toBe(1);
   });
 
@@ -103,7 +106,7 @@ describe("Fase 2: HP kasir melaporkan pembayaran (K-35)", () => {
     const { token } = await pairedDevice();
     await book();
     const res = await report(token, { notifId: "n9", amount: 12345, time: at(5).getTime() }, at(6));
-    expect(res.result).toBe("NO_MATCH");
+    expect(res.result).toBe("unmatched");
     const unmatched = await listUnmatchedPayments(at(6), prisma);
     expect(unmatched.map((u) => u.amount)).toEqual([12345]);
     await dismissIncomingPayment(unmatched[0].id, "admin-1", prisma);
@@ -114,17 +117,19 @@ describe("Fase 2: HP kasir melaporkan pembayaran (K-35)", () => {
     const { token } = await pairedDevice();
     const r = await book("10:00", "12:00", at(30));
     const res = await report(token, { notifId: "lama", amount: r.payAmount, time: NOW.getTime() }, at(31));
-    expect(res.result).toBe("NO_MATCH");
+    expect(res.result).toBe("unmatched");
     expect((await prisma.reservation.findUniqueOrThrow({ where: { code: r.code } })).status).toBe("PENDING_PAYMENT");
   });
 
-  it("reservasi sudah lunas lalu nominal sama dilaporkan HP lain → ALREADY_PAID, tidak dobel", async () => {
+  it("pembayaran kedua untuk booking yang sudah lunas → unmatched + muncul di admin sebagai kemungkinan bayar dobel (K-42)", async () => {
     const a = await pairedDevice();
     const b = await pairedDevice();
     const r = await book();
     await report(a.token, { notifId: "x", amount: r.payAmount, time: at(5).getTime() }, at(6));
     const res = await report(b.token, { notifId: "y", amount: r.payAmount, time: at(5).getTime() }, at(6));
-    expect(res).toMatchObject({ result: "ALREADY_PAID", reservationCode: r.code });
+    expect(res).toMatchObject({ result: "unmatched", label: `${r.code} · bayar dobel?` });
+    const unmatched = await listUnmatchedPayments(at(6), prisma);
+    expect(unmatched.map((u) => u.possibleDoublePaymentOf)).toEqual([r.code]);
   });
 
   it("bayar terlambat saat slot sudah diambil → LATE_SLOT_TAKEN, refund penuh, masuk Perlu Tindakan", async () => {
@@ -132,7 +137,7 @@ describe("Fase 2: HP kasir melaporkan pembayaran (K-35)", () => {
     const late = await book();
     await book("10:00", "12:00", at(30)); // hold pertama habis, slot diambil orang lain
     const res = await report(token, { notifId: "telat", amount: late.payAmount, time: at(25).getTime() }, at(31));
-    expect(res.result).toBe("LATE_SLOT_TAKEN");
+    expect(res).toMatchObject({ result: "matched", label: `${late.code} · telat, refund` });
     const row = await prisma.reservation.findUniqueOrThrow({ where: { code: late.code } });
     expect(row.status).toBe("CANCELLED");
     expect(row.refundAmount).toBe(late.payAmount);
@@ -168,6 +173,6 @@ describe("Fase 2: HP kasir melaporkan pembayaran (K-35)", () => {
     expect((await post({ ...body, amount: -5 }, `Bearer ${token}`)).status).toBe(400);
     const okRes = await post(body, `Bearer ${token}`);
     expect(okRes.status).toBe(200);
-    expect((await okRes.json()).data).toEqual({ result: "NO_MATCH", reservationCode: null });
+    expect((await okRes.json()).data).toEqual({ result: "unmatched", label: null, reservationCode: null });
   });
 });

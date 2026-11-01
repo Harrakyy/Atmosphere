@@ -85,7 +85,7 @@ export async function getTicketByToken(
     servingAt: reservation.servingAt,
     kitchenNote: reservation.kitchenNote,
     holdExpiresAt: reservation.holdExpiresAt,
-    uniqueDiscount: reservation.uniqueDiscount,
+    uniqueCode: reservation.uniqueCode,
     payAmount: reservation.payAmount,
     paymentClaimedAt: reservation.paymentClaimedAt,
     qris,

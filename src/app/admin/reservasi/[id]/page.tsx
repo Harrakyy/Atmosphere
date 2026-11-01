@@ -91,7 +91,7 @@ interface ReservationDetail {
   totalAmount: number;
   baseTotal: number;
   payAmount: number;
-  uniqueDiscount: number;
+  uniqueCode: number;
   paymentClaimedAt: string | null;
   paidAt: string | null;
   checkedInAt: string | null;

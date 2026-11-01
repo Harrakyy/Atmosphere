@@ -16,7 +16,7 @@ interface Device {
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString("id-ID", { timeZone: "Asia/Jakarta", dateStyle: "medium", timeStyle: "short" }) + " WIB";
 
-// K-35: sambungkan HP kasir (aplikasi SetorPantau) supaya pembayaran QRIS otomatis Lunas
+// K-35: sambungkan HP kasir (app Setor, Protokol Setor) supaya pembayaran QRIS otomatis Lunas
 export function DevicesCard() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [pairing, setPairing] = useState<{ code: string; expiresAt: string } | null>(null);
@@ -84,7 +84,7 @@ export function DevicesCard() {
     <div className="bg-white rounded-3xl p-6 md:p-8 border border-[#DFDDD6] shadow-xs flex flex-col gap-4 text-xs">
       <div>
         <h2 className="text-sm font-bold text-[#1C2955] flex items-center gap-2">
-          <Smartphone className="size-4" /> HP Kasir (SetorPantau)
+          <Smartphone className="size-4" /> HP Kasir (app Setor)
         </h2>
         <p className="text-gray-500 mt-1">
           HP yang tersambung membaca notifikasi DANA &quot;Pembayaran Masuk&quot; lalu otomatis menandai reservasi dengan
@@ -94,7 +94,7 @@ export function DevicesCard() {
 
       {pairing ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 flex flex-col gap-2" aria-live="polite">
-          <span className="font-bold text-emerald-900">Di aplikasi SetorPantau → Pengaturan → Hubungkan ke web, isi:</span>
+          <span className="font-bold text-emerald-900">Di app Setor → Pengaturan → Hubungkan ke web, isi:</span>
           <span className="text-emerald-800">
             Alamat web: <b className="font-mono">{typeof window !== "undefined" ? window.location.origin : ""}</b>
           </span>

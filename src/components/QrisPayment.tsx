@@ -13,7 +13,7 @@ interface Props {
   code: string;
   qris: string;
   totalAmount: number;
-  uniqueDiscount: number;
+  uniqueCode: number;
   payAmount: number;
   holdExpiresAt: string;
   paymentClaimedAt: string | null;
@@ -24,7 +24,7 @@ const formatTimer = (sec: number) =>
   `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
 
 export function QrisPayment(props: Props) {
-  const { token, code, qris, totalAmount, uniqueDiscount, payAmount, holdExpiresAt, paymentClaimedAt, onChanged } = props;
+  const { token, code, qris, totalAmount, uniqueCode, payAmount, holdExpiresAt, paymentClaimedAt, onChanged } = props;
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [claiming, setClaiming] = useState(false);
@@ -81,8 +81,8 @@ export function QrisPayment(props: Props) {
             <dd>{formatRupiah(totalAmount)}</dd>
           </div>
           <div className="flex justify-between text-emerald-700">
-            <dt>Diskon kode unik</dt>
-            <dd>−{formatRupiah(uniqueDiscount)}</dd>
+            <dt>Kode unik (pencocok pembayaran)</dt>
+            <dd>+{formatRupiah(uniqueCode)}</dd>
           </div>
           <div className="flex justify-between border-t pt-2 mt-1 text-sm font-extrabold">
             <dt>Bayar tepat</dt>

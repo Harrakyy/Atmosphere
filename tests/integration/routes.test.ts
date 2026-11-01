@@ -123,7 +123,7 @@ describe("End-to-End API Routes (Hari 1)", () => {
     const { code, ticketToken, payAmount, totalAmount } = createJson.data;
     expect(code).toMatch(/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}$/);
     expect(ticketToken).toBeDefined();
-    expect(payAmount).toBe(totalAmount - 1); // R-Q3
+    expect(payAmount).toBe(totalAmount + 100); // K-41
     expect(totalAmount).toBe(84000);
 
     // 2. Retrieve ticket by token

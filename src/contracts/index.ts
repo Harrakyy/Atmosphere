@@ -195,7 +195,7 @@ export const adminUpdateSettingSchema = z.object({
 });
 
 
-// K-35: HP kasir (SetorPantau)
+// K-35: HP kasir (app Setor, Protokol Setor)
 export const pairDeviceSchema = z.object({
   code: z.string().trim().min(8, "Kode pairing 8 karakter").max(12),
   name: z.string().trim().max(40).default("HP Kasir"),
