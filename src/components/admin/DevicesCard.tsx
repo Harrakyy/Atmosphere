@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { KeyRound, Loader2, Smartphone, Unplug } from "lucide-react";
+import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
 
 interface Device {
@@ -22,6 +23,7 @@ export function DevicesCard() {
   const [pairing, setPairing] = useState<{ code: string; expiresAt: string } | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [qr, setQr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -52,6 +54,14 @@ export function DevicesCard() {
       clearInterval(poll);
     };
   }, [pairing, load]);
+
+  // QR untuk app Setor (tab Usaha → + → Scan QR): alamat web + kode, format sama dengan Kosinyuk
+  useEffect(() => {
+    if (!pairing) return setQr(null);
+    QRCode.toDataURL(`${window.location.origin}/setor/pair?c=${pairing.code}`, { width: 320, margin: 1 })
+      .then(setQr)
+      .catch(() => setQr(null));
+  }, [pairing]);
 
   const createCode = async () => {
     setBusy(true);
@@ -94,7 +104,12 @@ export function DevicesCard() {
 
       {pairing ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 flex flex-col gap-2" aria-live="polite">
-          <span className="font-bold text-emerald-900">Di app Setor → Pengaturan → Hubungkan ke web, isi:</span>
+          <span className="font-bold text-emerald-900">Di app Setor → tab Usaha → + → Scan QR dari web usaha:</span>
+          {qr && (
+            // eslint-disable-next-line @next/next/no-img-element -- data URL buatan klien
+            <img src={qr} alt={`QR pairing Setor, kode ${pairing.code}`} className="size-44 rounded-xl border border-emerald-200 bg-white p-1" />
+          )}
+          <span className="font-bold text-emerald-900">Atau ketik manual:</span>
           <span className="text-emerald-800">
             Alamat web: <b className="font-mono">{typeof window !== "undefined" ? window.location.origin : ""}</b>
           </span>
