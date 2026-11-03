@@ -3,7 +3,7 @@ import { validateSchedule } from "../time-rules";
 import { validateCart, CartItemInput, ProductWithCategory } from "../cart";
 import { normalizePhone } from "../phone";
 import { generateCode, generateTicketToken } from "../codes";
-import { pickUniqueCode } from "../payment-band";
+import { pickUniqueCode, type Band } from "../payment-band";
 import {
   AppError,
   SlotTakenError,
@@ -204,7 +204,7 @@ export async function createReservation(
         }
         if (!code) throw new CodeCollisionError();
 
-        const uniqueCode = await pickReservationCode(tx, cart.totalAmount, now);
+        const uniqueCode = await pickReservationCode(tx, cart.totalAmount, now, { min: setting.bandMin, max: setting.bandMax });
 
         const created = await tx.reservation.create({
           data: {
@@ -286,7 +286,7 @@ type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 // R-Q3 + K-41: nominal bayar = total + kode unik, di jalur Atmosphere (Protokol Setor) dan belum dipakai.
 // Nominal yang menunggu bayar, kedaluwarsa ≤24 jam, atau baru lunas ≤24 jam ikut dihindari supaya
 // bayar terlambat atau bayar dobel tidak tertukar dengan pesanan baru.
-async function pickReservationCode(tx: Tx, totalAmount: number, now: Date): Promise<number> {
+async function pickReservationCode(tx: Tx, totalAmount: number, now: Date, band: Band): Promise<number> {
   const recent = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const used = await tx.reservation.findMany({
     where: {
@@ -300,7 +300,7 @@ async function pickReservationCode(tx: Tx, totalAmount: number, now: Date): Prom
     select: { payAmount: true },
   });
   try {
-    return pickUniqueCode(totalAmount, new Set(used.map((r) => r.payAmount)));
+    return pickUniqueCode(totalAmount, new Set(used.map((r) => r.payAmount)), band);
   } catch {
     throw new AppError(
       "PAYMENT_BUSY",

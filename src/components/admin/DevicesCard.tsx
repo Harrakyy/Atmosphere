@@ -98,7 +98,8 @@ export function DevicesCard() {
         </h2>
         <p className="text-gray-500 mt-1">
           HP yang tersambung membaca notifikasi DANA &quot;Pembayaran Masuk&quot; lalu otomatis menandai reservasi dengan
-          nominal yang cocok sebagai <b>Lunas</b>.
+          nominal yang cocok sebagai <b>Lunas</b>. Rentang 3 digit terakhir kode unik diatur dari app Setor (tab Usaha → Ubah
+          rentang); reservasi baru otomatis mengikuti.
         </p>
       </div>
 

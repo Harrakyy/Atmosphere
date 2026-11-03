@@ -199,6 +199,7 @@ export const adminUpdateSettingSchema = z.object({
 export const pairDeviceSchema = z.object({
   code: z.string().trim().min(8, "Kode pairing 8 karakter").max(12),
   name: z.string().trim().max(40).default("HP Kasir"),
+  band: z.unknown().optional(), // Protokol Setor §1: rentang pilihan pemilik, divalidasi di server/devices
 });
 
 export const incomingPaymentSchema = z.object({

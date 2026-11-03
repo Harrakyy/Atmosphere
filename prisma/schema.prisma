@@ -57,6 +57,9 @@ model Setting {
   claimHoldMinutes   Int      @default(120) // perpanjangan waktu tahan setelah customer klaim sudah bayar
   cafeWhatsapp       String   @default("") // format 62…
   qrisPayload        String   @default("") // teks QRIS statis merchant (R-Q1)
+  // Protokol Setor §1/§5: rentang 3 digit terakhir nominal bayar, dipilih pemilik di app Setor
+  bandMin            Int      @default(100)
+  bandMax            Int      @default(499)
   updatedAt          DateTime @updatedAt @db.Timestamptz(3)
 }
 

@@ -37,3 +37,15 @@ describe("Jalur nominal Protokol Setor: Atmosphere 100–499 (K-41)", () => {
     expect(ATMOSPHERE_BAND).toEqual({ min: 100, max: 499 });
   });
 });
+
+describe("rentang pilihan Setor", () => {
+  it("kode unik menempatkan nominal di rentang yang dipilih", async () => {
+    const { pickUniqueCode, inBand, validBand } = await import("@/server/payment-band");
+    const band = { min: 200, max: 249 };
+    expect(pickUniqueCode(84000, new Set(), band)).toBe(200);
+    expect(inBand(84249, band)).toBe(true);
+    expect(inBand(84250, band)).toBe(false);
+    expect(validBand({ min: 1, max: 3 })).toBe(false);
+    expect(validBand({ min: 100, max: 499 })).toBe(true);
+  });
+});

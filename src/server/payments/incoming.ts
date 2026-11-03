@@ -44,6 +44,8 @@ async function toResponse(result: IncomingResult, reservationId: string | null, 
  * Hanya reservasi yang dibuat SEBELUM notifikasi muncul yang bisa cocok, jadi laporan lama
  * yang dikirim ulang tidak bisa melunasi reservasi baru dengan nominal kebetulan sama.
  */
+const TWIN_MS = 2 * 60 * 1000;
+
 export async function handleIncomingPayment(
   device: { id: string; name: string },
   input: IncomingInput,
@@ -55,6 +57,16 @@ export async function handleIncomingPayment(
     include: { device: false },
   });
   if (existing) return toResponse(existing.result, existing.reservationId, true, db);
+
+  // Dua HP Setor membaca DANA yang sama: notifId beda (waktu notif tiap HP beda), nominal sama dalam ±2 menit
+  const twin = await db.incomingPayment.findFirst({
+    where: {
+      deviceId: { not: device.id },
+      amount: input.amount,
+      notifiedAt: { gte: new Date(input.time - TWIN_MS), lte: new Date(input.time + TWIN_MS) },
+    },
+  });
+  if (twin) return toResponse(twin.result, twin.reservationId, true, db);
 
   const notifiedAt = new Date(input.time);
   if (Number.isNaN(notifiedAt.getTime()) || notifiedAt.getTime() > now.getTime() + CLOCK_SKEW_MS || notifiedAt.getTime() < now.getTime() - 7 * DAY) {

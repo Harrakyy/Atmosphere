@@ -122,14 +122,38 @@ describe("Fase 2: HP kasir melaporkan pembayaran (K-35)", () => {
   });
 
   it("pembayaran kedua untuk booking yang sudah lunas → unmatched + muncul di admin sebagai kemungkinan bayar dobel (K-42)", async () => {
+    // Bayar dobel = dua notifikasi DANA di HP yang sama
     const a = await pairedDevice();
-    const b = await pairedDevice();
     const r = await book();
     await report(a.token, { notifId: "x", amount: r.payAmount, time: at(5).getTime() }, at(6));
-    const res = await report(b.token, { notifId: "y", amount: r.payAmount, time: at(5).getTime() }, at(6));
+    const res = await report(a.token, { notifId: "y", amount: r.payAmount, time: at(5).getTime() + 30_000 }, at(6));
     expect(res).toMatchObject({ result: "unmatched", label: `${r.code} · bayar dobel?` });
     const unmatched = await listUnmatchedPayments(at(6), prisma);
     expect(unmatched.map((u) => u.possibleDoublePaymentOf)).toEqual([r.code]);
+  });
+
+  it("dua HP kasir membaca notifikasi yang sama → laporan HP kedua = duplicate, bukan bayar dobel", async () => {
+    const a = await pairedDevice();
+    const b = await pairedDevice();
+    const r = await book();
+    await report(a.token, { notifId: "a1", amount: r.payAmount, time: at(5).getTime() }, at(6));
+    const res = await report(b.token, { notifId: "b1", amount: r.payAmount, time: at(5).getTime() + 2000 }, at(6));
+    expect(res).toMatchObject({ result: "duplicate" });
+    expect(await listUnmatchedPayments(at(6), prisma)).toEqual([]);
+  });
+
+  it("rentang dari Setor saat pairing dipakai reservasi baru; riwayat bisa diambil lagi", async () => {
+    const { deviceHistory, setBand } = await import("@/server/devices");
+    const { code } = await createPairingCode("admin-1", NOW, prisma);
+    const paired = await pairDevice({ code, name: "HP", band: { min: 200, max: 249 } }, NOW, prisma);
+    expect(paired.band).toEqual({ min: 200, max: 249 });
+    const r = await book();
+    expect(r.payAmount % 1000).toBeGreaterThanOrEqual(200);
+    expect(r.payAmount % 1000).toBeLessThanOrEqual(249);
+    await report(paired.token, { notifId: "h1", amount: r.payAmount, time: at(5).getTime() }, at(6));
+    expect((await deviceHistory(at(6), prisma)).items[0]).toMatchObject({ notifId: "h1", result: "matched", label: `Booking ${r.code}` });
+    await expect(setBand({ min: 1, max: 3 }, prisma)).rejects.toThrow(/Rentang/);
+    expect(await setBand({ min: 100, max: 499 }, prisma)).toEqual({ min: 100, max: 499 });
   });
 
   it("bayar terlambat saat slot sudah diambil → LATE_SLOT_TAKEN, refund penuh, masuk Perlu Tindakan", async () => {
